@@ -65,6 +65,7 @@ void process(FILE *file, PGresult *result) {
 
 // TODO: Move to args.h and args.c
 typedef struct {
+  char* file;
   char* dbname;
   char* user;
   char* password;
@@ -98,6 +99,7 @@ int parse_has_arg(const char* name, bool* value, char argi, char *argv[]) {
 args_t parse_args(int argc, char *argv[]) {
   args_t args;
 
+  args.file = "cdc.yaml";
   args.dbname = "postgres";
   args.user = "postgres";
   args.password = "postgres";
@@ -109,6 +111,7 @@ args_t parse_args(int argc, char *argv[]) {
   args.uninstall = false;
 
   for(int i=0; i < argc; i++){
+    if(parse_arg("--file", &args.file, i, argv)){ continue; }
     if(parse_arg("--dbname", &args.dbname, i, argv)){ continue; }
     if(parse_arg("--user", &args.user, i, argv)){ continue; }
     if(parse_arg("--password", &args.password, i, argv)){ continue; }
@@ -129,7 +132,7 @@ int main(int argc, char *argv[]) {
 
   args_t args = parse_args(argc, argv);
 
-  FILE *file = fopen("cdc.yaml", "a+");
+  FILE *file = fopen(args.file, "a+");
   char conn_str[1024];
   int conn_str_err = sprintf(conn_str, "dbname=%s user=%s password=%s host=%s port=%s", args.dbname, args.user, args.password, args.host, args.port);
   if(conn_str_err <= 0) {

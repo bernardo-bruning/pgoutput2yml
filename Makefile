@@ -1,2 +1,6 @@
 build: main.c
-	gcc main.c -o cdc -I/usr/include/postgresql -lpq 
+	@mkdir -p bin
+	gcc main.c -o bin/cdc2yml -I/usr/include/postgresql -lpq 
+
+clean:
+	@rm -R bin
