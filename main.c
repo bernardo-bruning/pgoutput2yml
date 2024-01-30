@@ -6,13 +6,13 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-#define INFO(format, ...) printf("INFO: " format "\n", ##__VA_ARGS__)
-#define DEBUG(format, ...) printf("DEBUG: " format "\n", ##__VA_ARGS__)
-#define ERROR(format, ...) printf("ERROR: " format "\n", ##__VA_ARGS__)
+#include "options.h"
+#include "logging.h"
 
 const int ERR_CONNECT = 1;
 const int ERR_QUERY = 2;
 const int ERR_FORMAT = 3;
+
 const char* BINARY_CHANGES_SQL = "SELECT data FROM pg_logical_slot_get_binary_changes('%s', NULL, NULL, 'proto_version', '1', 'publication_names', '%s');";
 
 int16_t read_int16(char *bytes) { return (int16_t)bytes[1] | bytes[0] << 8; }
@@ -63,124 +63,57 @@ void process(FILE *file, PGresult *result) {
   }
 }
 
-// TODO: Move to args.h and args.c
-typedef struct {
-  char* file;
-  char* dbname;
-  char* user;
-  char* password;
-  char* host;
-  char* port;
-  char* slotname;
-  char* publication;
-  bool install;
-  bool uninstall;
-} args_t;
-
-int parse_arg(const char* name, char** value, char argi, char *argv[]) {
-  if(strcmp(argv[argi], name) == 0) {
-    *value = argv[argi + 1];
-    return 1;
-  }
-
-  return 0;
-}
-
-int parse_has_arg(const char* name, bool* value, char argi, char *argv[]) {
-  if(strcmp(argv[argi], name) == 0) {
-    *value = true;
-    return 1;
-  }
-
-  return 0;
-
-}
-
-args_t parse_args(int argc, char *argv[]) {
-  args_t args;
-
-  args.file = "cdc.yaml";
-  args.dbname = "postgres";
-  args.user = "postgres";
-  args.password = "postgres";
-  args.host = "localhost";
-  args.port = "5432";
-  args.slotname = "cdc";
-  args.publication = "cdc";
-  args.install = false;
-  args.uninstall = false;
-
-  for(int i=0; i < argc; i++){
-    if(parse_arg("--file", &args.file, i, argv)){ continue; }
-    if(parse_arg("--dbname", &args.dbname, i, argv)){ continue; }
-    if(parse_arg("--user", &args.user, i, argv)){ continue; }
-    if(parse_arg("--password", &args.password, i, argv)){ continue; }
-    if(parse_arg("--host", &args.host, i, argv)){ continue; }
-    if(parse_arg("--port", &args.port, i, argv)){ continue; }
-    if(parse_arg("--slotname", &args.slotname, i, argv)){ continue; }
-    if(parse_arg("--publication", &args.slotname, i, argv)){ continue; }
-    if(parse_has_arg("--install", &args.install, i, argv)) { continue; }
-    if(parse_has_arg("--uninstall", &args.uninstall, i, argv)) { continue; }
-  }
-
-  return args;
-}
-
-int main(int argc, char *argv[]) {
-  printf("YAML CDC\n");
-  printf("=======================\n");
-
-  args_t args = parse_args(argc, argv);
-
-  FILE *file = fopen(args.file, "a+");
+int create_connection(PGconn *conn, options_t options){
   char conn_str[1024];
-  int conn_str_err = sprintf(conn_str, "dbname=%s user=%s password=%s host=%s port=%s", args.dbname, args.user, args.password, args.host, args.port);
+  int conn_str_err = sprintf(conn_str, "dbname=%s user=%s password=%s host=%s port=%s", options.dbname, options.user, options.password, options.host, options.port);
   if(conn_str_err <= 0) {
     ERROR("failed to format connection");
     return ERR_FORMAT;
   }
 
   INFO("establishing connection: %s", conn_str);
-  PGconn *conn = PQconnectdb(conn_str);
+  conn = PQconnectdb(conn_str);
 
   if (PQstatus(conn) != CONNECTION_OK) {
     ERROR("connection failure");
     return ERR_CONNECT;
   }
 
-  INFO("database connected");
+  return 0;
+}
 
-  if(args.install) {
-    INFO("starting install");
-    PGresult* slot_result = PQexec(conn, "SELECT pg_create_logical_replication_slot('cdc', 'pgoutput');");
-    char *error = PQresultErrorMessage(slot_result);
-    if(error[0] != '\0') {
-      ERROR("%s", error);
-      return ERR_QUERY;
-    }
-    PQclear(slot_result);
-    INFO("install completed");
-    return 0;
+int install(PGconn *conn) {
+  INFO("starting install");
+  PGresult* slot_result = PQexec(conn, "SELECT pg_create_logical_replication_slot('cdc', 'pgoutput');");
+  char *error = PQresultErrorMessage(slot_result);
+  if(error[0] != '\0') {
+    ERROR("%s", error);
+    return ERR_QUERY;
   }
+  PQclear(slot_result);
+  INFO("install completed");
+  return 0;
+}
 
-  if(args.uninstall) {
-    INFO("starting uninstall");
-    PGresult* slot_result = PQexec(conn, "SELECT pg_drop_replication_slot('cdc');");
-    char *error = PQresultErrorMessage(slot_result);
-    if(error[0] != '\0') {
-      ERROR("%s", error);
-      return ERR_QUERY;
-    }
-    PQclear(slot_result);
-    INFO("uninstall completed");
-    return 0;
+int uninstall(PGconn *conn) {
+  INFO("starting uninstall");
+  PGresult* slot_result = PQexec(conn, "SELECT pg_drop_replication_slot('cdc');");
+  char *error = PQresultErrorMessage(slot_result);
+  if(error[0] != '\0') {
+    ERROR("%s", error);
+    return ERR_QUERY;
   }
+  PQclear(slot_result);
+  INFO("uninstall completed");
+  return 0;
+}
 
+int watch(PGconn *conn, FILE *file, char* slotname, char* publication) {
   INFO("watching changes");
   while (1) {
     char binary_changes_query[1024];
 
-    if(sprintf(binary_changes_query, BINARY_CHANGES_SQL, args.slotname, args.publication) <= 0) {
+    if(sprintf(binary_changes_query, BINARY_CHANGES_SQL, slotname, publication) <= 0) {
       ERROR("failed to format query");
       return ERR_FORMAT;
     }
@@ -201,7 +134,37 @@ int main(int argc, char *argv[]) {
     PQclear(result);
     sleep(1);
   }
+}
+
+int main(int argc, char *argv[]) {
+  int err;
+  FILE *file;
+  PGconn *conn;
+
+  printf("YAML CDC\n");
+  printf("=======================\n");
+
+  options_t options = parse_options(argc, argv);
+
+  file = fopen(options.file, "a+");
+
+  err = create_connection(conn, options);
+  if(err > 0) {
+    return err;
+  }
+
+  INFO("database connected");
+
+  if(options.install) {
+    return install(conn);
+  }
+
+  if(options.uninstall) {
+    return uninstall(conn);
+  }
+
+  err = watch(conn, file, options.slotname, options.publication);
   PQfinish(conn);
   fclose(file);
-  return 0;
+  return err;
 }
