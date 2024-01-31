@@ -22,51 +22,42 @@ int32_t read_int32(char *bytes) {
   bytes[3];
 }
 
-void process(FILE *file, PGresult *result) {
-  int ntuples = PQntuples(result);
-  int columns = PQnfields(result);
+int parse_buffer(char* buffer, int size, FILE* file) {
+  switch (buffer[0]) {
+    case 'I':
+      uint16_t columns_size = read_int16(buffer + 6);
+      fprintf(file, "insert:\n");
+      buffer += 8; // Skip metadata
+      int column_idx = 0;
+      while (column_idx < columns_size) {
+        char type = buffer[0];
+        int32_t tuple_size = read_int32(buffer + 1);
+        buffer += 5;
 
-  DEBUG("query return %d tuples", ntuples);
-  for (int tuple_idx = 0; tuple_idx < ntuples; tuple_idx++) {
-    size_t size = PQgetlength(result, tuple_idx, 0);
-    char *value = PQgetvalue(result, tuple_idx, 0);
-    char *bytes = PQunescapeBytea(value, &size);
-    switch (bytes[0]) {
-      case 'I':
-        uint16_t columns_size = read_int16(bytes + 6);
-
-        fprintf(file, "insert:\n");
-
-        int reader_idx = 8;
-        while (reader_idx < size) {
-          char type = bytes[reader_idx];
-          int32_t tuple_size = read_int32(bytes + reader_idx + 1);
-          reader_idx += 5;
-
-          switch (type) {
-            case 't':
-              fprintf(file, "\t - ");
-              for (int j = 0; j < tuple_size; j++) {
-                fprintf(file, "%c", bytes[reader_idx + j]);
-              }
-              reader_idx += tuple_size;
-              fprintf(file, "\n");
-              break;
-            case 'n':
-              fprintf(file, "\t - NULL\n");
-              break;
-            default:
-              DEBUG("unknown data tuple %c", type);
-          }
+        switch (type) {
+          case 't':
+            fprintf(file, "\t - ");
+            for (int j = 0; j < tuple_size; j++) {
+              fprintf(file, "%c", buffer[j]);
+            }
+            buffer += tuple_size;
+            fprintf(file, "\n");
+            break;
+          case 'n':
+            fprintf(file, "\t - NULL\n");
+            break;
+          default:
+            DEBUG("unknown data tuple: %c", type);
         }
-    }
-    PQfreemem(bytes);
+
+        column_idx++;
+      }
   }
 }
 
 int create_connection(PGconn **conn, options_t options){
   char conn_str[1024];
-  int conn_str_err = sprintf(conn_str, "dbname=%s user=%s password=%s host=%s port=%s", options.dbname, options.user, options.password, options.host, options.port);
+  int conn_str_err = sprintf(conn_str, "replication=database dbname=%s user=%s password=%s host=%s port=%s", options.dbname, options.user, options.password, options.host, options.port);
   if(conn_str_err <= 0) {
     ERROR("failed to format connection");
     return ERR_FORMAT;
@@ -111,21 +102,16 @@ int uninstall(PGconn *conn) {
 
 int watch(PGconn *conn, FILE *file, char* slotname, char* publication) {
   int err;
+  char* buffer;
+  int buffer_size;
+  PGresult *result;
+
   INFO("watching changes");
   while (1) {
-    char binary_changes_query[1024];
-
-    if(sprintf(binary_changes_query, BINARY_CHANGES_SQL, slotname, publication) <= 0) {
-      ERROR("failed to format query");
-      return ERR_FORMAT;
-    }
-
-    DEBUG("executing query: %s", binary_changes_query);
-    PGresult *result = PQexec(
-      conn,
-      binary_changes_query);
-
+    result = PQexec(conn, "START_REPLICATION SLOT \"cdc\" LOGICAL 0/0 (proto_version '1', publication_names 'cdc')");
     err = PQresultStatus(result);
+
+    DEBUG("query return code: %d", err);
 
     if(err == PGRES_FATAL_ERROR) {
       char *error = PQerrorMessage(conn);
@@ -133,12 +119,31 @@ int watch(PGconn *conn, FILE *file, char* slotname, char* publication) {
       return ERR_QUERY;
     }
 
-    DEBUG("query return code: %d", err);
 
-    process(file, result);
+    while(buffer_size = PQgetCopyData(conn, &buffer, 0) > 0) {
+      switch(buffer[0]) {
+        case 'w':
+          buffer += 25;
+          DEBUG("receiving wal with command %c", buffer[0]);
+          parse_buffer(buffer, buffer_size, file);
+          fflush(file);
+          break;
+        case 'k':
+          DEBUG("keeping alive");
+          break;
+        default:
+          DEBUG("buffer input not parsed: %s", buffer);
+      }
+    }
 
-    fflush(file);
+    result = PQgetResult(conn);
+    if(PQendcopy(conn) > 0) {
+      ERROR("failed end copy: %s", PQerrorMessage(conn));
+      return ERR_QUERY;
+    }
+
     PQclear(result);
+    PQfreemem(buffer);
     sleep(1);
   }
 }
