@@ -15,24 +15,55 @@ const int ERR_FORMAT = 3;
 
 const char* BINARY_CHANGES_SQL = "SELECT data FROM pg_logical_slot_get_binary_changes('%s', NULL, NULL, 'proto_version', '1', 'publication_names', '%s');";
 
-int16_t read_int16(char *bytes) { return (int16_t)bytes[1] | bytes[0] << 8; }
+int16_t read_int16(char **buffer_ptr) {
+  char* buffer = *buffer_ptr;
+  int16_t value = (int16_t)buffer[1] | buffer[0] << 8;
+  *buffer_ptr += 2;
+  return value;
+}
 
-int32_t read_int32(char *bytes) {
-  return (int32_t)(bytes[0] << 24) + (bytes[1] << 16) + (bytes[2] << 8) +
-  bytes[3];
+int32_t read_int32(char **buffer_ptr) {
+  char *buffer = *buffer_ptr;
+  int32_t value = (int32_t)(buffer[0] << 24) + (buffer[1] << 16) + (buffer[2] << 8) +
+  buffer[3];
+  *buffer_ptr += 4;
+  return value;
+}
+
+char read_char(char **buffer_ptr) {
+  char value = (*buffer_ptr)[0];
+  *buffer_ptr += 1;
+  return value;
+}
+
+char* read_string(char **buffer_ptr) {
+  char* buffer = *buffer_ptr;
+  *buffer_ptr += strlen(buffer)+1;
+  return buffer;
 }
 
 int parse_buffer(char* buffer, int size, FILE* file) {
-  switch (buffer[0]) {
+  uint32_t relation_id;
+  switch (read_char(&buffer)) {
+    case 'R':
+      relation_id = read_int32(&buffer);
+      fprintf(file, " - relation_id: %d:\n", relation_id);
+      fprintf(file, "   operation: relation\n");
+      fprintf(file, "   namespace: %s\n", read_string(&buffer));
+      fprintf(file, "   name: %s\n", read_string(&buffer));
+      break;
     case 'I':
-      uint16_t columns_size = read_int16(buffer + 6);
-      fprintf(file, "insert:\n");
-      buffer += 8; // Skip metadata
+      relation_id = read_int32(&buffer);
+      char char_tuple = read_char(&buffer);
+      uint16_t columns_size = read_int16(&buffer);
+
+      fprintf(file, " - relation_id: %d\n", relation_id);
+      fprintf(file, "   operation: insert\n");
+      fprintf(file, "   data:\n");
       int column_idx = 0;
       while (column_idx < columns_size) {
-        char type = buffer[0];
-        int32_t tuple_size = read_int32(buffer + 1);
-        buffer += 5;
+        char type = read_char(&buffer);
+        int32_t tuple_size = read_int32(&buffer);
 
         switch (type) {
           case 't':
