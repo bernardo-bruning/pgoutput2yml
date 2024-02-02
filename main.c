@@ -61,8 +61,6 @@ int parse_buffer(char* buffer, int size, FILE* file) {
       fprintf(file, "   replica_identity_settigs: %d\n", read_int8(&buffer));
 
       number_columns = read_int16(&buffer);
-      fprintf(file, "   number_columns: %d\n", number_columns);
-
       fprintf(file, "   columns: \n");
       for(int i=0; i<number_columns; i++) {
         read_int8(&buffer); // read flag column
