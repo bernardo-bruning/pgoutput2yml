@@ -13,7 +13,7 @@ const int ERR_CONNECT = 1;
 const int ERR_QUERY = 2;
 const int ERR_FORMAT = 3;
 
-const char* BINARY_CHANGES_SQL = "SELECT data FROM pg_logical_slot_get_binary_changes('%s', NULL, NULL, 'proto_version', '1', 'publication_names', '%s');";
+const char* START_REPLICATION_QUERY = "START_REPLICATION SLOT \"%s\" LOGICAL 0/0 (proto_version '1', publication_names '%s')";
 
 int16_t read_int16(char **buffer_ptr) {
   char* buffer = *buffer_ptr;
@@ -133,13 +133,20 @@ int uninstall(PGconn *conn) {
 
 int watch(PGconn *conn, FILE *file, char* slotname, char* publication) {
   int err;
+  char query[1024];
   char* buffer;
   int buffer_size;
   PGresult *result;
 
   INFO("watching changes");
   while (1) {
-    result = PQexec(conn, "START_REPLICATION SLOT \"cdc\" LOGICAL 0/0 (proto_version '1', publication_names 'cdc')");
+    err = sprintf(query, START_REPLICATION_QUERY, slotname, publication);
+    if(err < 0) {
+      ERROR("format query replication error");
+      return ERR_FORMAT;
+    }
+
+    result = PQexec(conn, query);
     err = PQresultStatus(result);
 
     DEBUG("query return code: %d", err);
