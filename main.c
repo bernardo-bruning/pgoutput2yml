@@ -14,6 +14,12 @@ const int ERR_QUERY = 2;
 const int ERR_FORMAT = 3;
 
 const char* START_REPLICATION_QUERY = "START_REPLICATION SLOT \"%s\" LOGICAL 0/0 (proto_version '1', publication_names '%s')";
+int8_t read_int8(char **buffer_ptr) {
+  char *buffer = *buffer_ptr;
+  int8_t value = (int8_t) buffer[0];
+  *buffer_ptr += 1;
+  return value;
+}
 
 int16_t read_int16(char **buffer_ptr) {
   char* buffer = *buffer_ptr;
@@ -44,6 +50,7 @@ char* read_string(char **buffer_ptr) {
 
 int parse_buffer(char* buffer, int size, FILE* file) {
   uint32_t relation_id;
+  int16_t number_columns;
   switch (read_char(&buffer)) {
     case 'R':
       relation_id = read_int32(&buffer);
@@ -51,6 +58,20 @@ int parse_buffer(char* buffer, int size, FILE* file) {
       fprintf(file, "   operation: relation\n");
       fprintf(file, "   namespace: %s\n", read_string(&buffer));
       fprintf(file, "   name: %s\n", read_string(&buffer));
+      fprintf(file, "   replica_identity_settigs: %d\n", read_int8(&buffer));
+
+      number_columns = read_int16(&buffer);
+      fprintf(file, "   number_columns: %d\n", number_columns);
+
+      fprintf(file, "   columns: \n");
+      for(int i=0; i<number_columns; i++) {
+        read_int8(&buffer); // read flag column
+        fprintf(file, "     - %s \n", read_string(&buffer));
+        read_int32(&buffer); // read oid
+        read_int32(&buffer); // atttypmod
+      }
+
+      fprintf(file, "\n");
       break;
     case 'I':
       relation_id = read_int32(&buffer);
@@ -83,6 +104,9 @@ int parse_buffer(char* buffer, int size, FILE* file) {
 
         column_idx++;
       }
+
+      fprintf(file, "\n");
+      break;
   }
 }
 
@@ -161,7 +185,7 @@ int watch(PGconn *conn, FILE *file, char* slotname, char* publication) {
     while(buffer_size = PQgetCopyData(conn, &buffer, 0) > 0) {
       switch(buffer[0]) {
         case 'w':
-          buffer += 25;
+          buffer += 25; // Skip reading wal metadata
           DEBUG("receiving wal with command %c", buffer[0]);
           parse_buffer(buffer, buffer_size, file);
           fflush(file);
