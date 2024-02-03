@@ -48,62 +48,76 @@ char* read_string(char **buffer_ptr) {
   return buffer;
 }
 
+void parse_relation(char** buffer, FILE *file) {
+  uint32_t relation_id;
+  int16_t number_columns;
+
+  relation_id = read_int32(buffer);
+  fprintf(file, " - relation_id: %d:\n", relation_id);
+  fprintf(file, "   operation: relation\n");
+  fprintf(file, "   namespace: %s\n", read_string(buffer));
+  fprintf(file, "   name: %s\n", read_string(buffer));
+  fprintf(file, "   replica_identity_settigs: %d\n", read_int8(buffer));
+
+  number_columns = read_int16(buffer);
+  fprintf(file, "   columns: \n");
+  for(int i=0; i<number_columns; i++) {
+    read_int8(buffer); // read flag column
+    fprintf(file, "     - %s \n", read_string(buffer));
+    read_int32(buffer); // read oid
+    read_int32(buffer); // atttypmod
+  }
+
+  fprintf(file, "\n");
+}
+
+void parse_insert(char** buffer, FILE* file) {
+  uint32_t relation_id;
+  int16_t number_columns;
+
+  relation_id = read_int32(buffer);
+  char char_tuple = read_char(buffer);
+  uint16_t columns_size = read_int16(buffer);
+
+  fprintf(file, " - relation_id: %d\n", relation_id);
+  fprintf(file, "   operation: insert\n");
+  fprintf(file, "   data:\n");
+  int column_idx = 0;
+  while (column_idx < columns_size) {
+    char type = read_char(buffer);
+    int32_t tuple_size = read_int32(buffer);
+
+    switch (type) {
+      case 't':
+        fprintf(file, "\t - ");
+        for (int j = 0; j < tuple_size; j++) {
+          fprintf(file, "%c", (*buffer)[j]);
+        }
+        *buffer += tuple_size;
+        fprintf(file, "\n");
+        break;
+      case 'n':
+        fprintf(file, "\t - NULL\n");
+        break;
+      default:
+        DEBUG("unknown data tuple: %c", type);
+    }
+
+    column_idx++;
+  }
+
+  fprintf(file, "\n");
+}
+
 int parse_buffer(char* buffer, int size, FILE* file) {
   uint32_t relation_id;
   int16_t number_columns;
   switch (read_char(&buffer)) {
     case 'R':
-      relation_id = read_int32(&buffer);
-      fprintf(file, " - relation_id: %d:\n", relation_id);
-      fprintf(file, "   operation: relation\n");
-      fprintf(file, "   namespace: %s\n", read_string(&buffer));
-      fprintf(file, "   name: %s\n", read_string(&buffer));
-      fprintf(file, "   replica_identity_settigs: %d\n", read_int8(&buffer));
-
-      number_columns = read_int16(&buffer);
-      fprintf(file, "   columns: \n");
-      for(int i=0; i<number_columns; i++) {
-        read_int8(&buffer); // read flag column
-        fprintf(file, "     - %s \n", read_string(&buffer));
-        read_int32(&buffer); // read oid
-        read_int32(&buffer); // atttypmod
-      }
-
-      fprintf(file, "\n");
+      parse_relation(&buffer, file);
       break;
     case 'I':
-      relation_id = read_int32(&buffer);
-      char char_tuple = read_char(&buffer);
-      uint16_t columns_size = read_int16(&buffer);
-
-      fprintf(file, " - relation_id: %d\n", relation_id);
-      fprintf(file, "   operation: insert\n");
-      fprintf(file, "   data:\n");
-      int column_idx = 0;
-      while (column_idx < columns_size) {
-        char type = read_char(&buffer);
-        int32_t tuple_size = read_int32(&buffer);
-
-        switch (type) {
-          case 't':
-            fprintf(file, "\t - ");
-            for (int j = 0; j < tuple_size; j++) {
-              fprintf(file, "%c", buffer[j]);
-            }
-            buffer += tuple_size;
-            fprintf(file, "\n");
-            break;
-          case 'n':
-            fprintf(file, "\t - NULL\n");
-            break;
-          default:
-            DEBUG("unknown data tuple: %c", type);
-        }
-
-        column_idx++;
-      }
-
-      fprintf(file, "\n");
+      parse_insert(&buffer, file);
       break;
   }
 }
