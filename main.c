@@ -71,17 +71,8 @@ void parse_relation(char** buffer, FILE *file) {
   fprintf(file, "\n");
 }
 
-void parse_insert(char** buffer, FILE* file) {
-  uint32_t relation_id;
-  int16_t number_columns;
-
-  relation_id = read_int32(buffer);
-  char char_tuple = read_char(buffer);
+void parse_tuple(char** buffer, FILE* file){
   uint16_t columns_size = read_int16(buffer);
-
-  fprintf(file, " - relation_id: %d\n", relation_id);
-  fprintf(file, "   operation: insert\n");
-  fprintf(file, "   data:\n");
   int column_idx = 0;
   while (column_idx < columns_size) {
     char type = read_char(buffer);
@@ -89,7 +80,7 @@ void parse_insert(char** buffer, FILE* file) {
 
     switch (type) {
       case 't':
-        fprintf(file, "\t - ");
+        fprintf(file, "\t  - ");
         for (int j = 0; j < tuple_size; j++) {
           fprintf(file, "%c", (*buffer)[j]);
         }
@@ -98,6 +89,7 @@ void parse_insert(char** buffer, FILE* file) {
         break;
       case 'n':
         fprintf(file, "\t - NULL\n");
+        *buffer ++;
         break;
       default:
         DEBUG("unknown data tuple: %c", type);
@@ -105,7 +97,43 @@ void parse_insert(char** buffer, FILE* file) {
 
     column_idx++;
   }
+}
 
+void parse_update(char** buffer, FILE* file) {
+  char key_char;
+  fprintf(file, " - relation_id: %d\n", read_int32(buffer));
+  fprintf(file, "   operation: update\n");
+
+  key_char = read_char(buffer);
+  if(key_char != 'K' && key_char != 'O') {
+    ERROR("unexpected key char %c", key_char);
+    exit(ERR_FORMAT);
+  }
+
+  fprintf(file, "   old_data:\n");
+  parse_tuple(buffer, file);
+
+  key_char = read_char(buffer);
+  if(key_char != 'N') {
+    return;
+  }
+
+  fprintf(file, "   new_data:\n");
+  parse_tuple(buffer, file);
+}
+
+void parse_insert(char** buffer, FILE* file) {
+  uint32_t relation_id;
+  int16_t number_columns;
+
+  relation_id = read_int32(buffer);
+  char char_tuple = read_char(buffer);
+
+  fprintf(file, " - relation_id: %d\n", relation_id);
+  fprintf(file, "   operation: insert\n");
+
+  fprintf(file, "   data:\n");
+  parse_tuple(buffer, file);
   fprintf(file, "\n");
 }
 
@@ -118,6 +146,9 @@ int parse_buffer(char* buffer, int size, FILE* file) {
       break;
     case 'I':
       parse_insert(&buffer, file);
+      break;
+    case 'U':
+      parse_update(&buffer, file);
       break;
   }
 }
