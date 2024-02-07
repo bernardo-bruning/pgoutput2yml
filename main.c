@@ -33,9 +33,9 @@ void delete_buffer(buffer_t* buffer) {
 }
 
 int8_t read_int8(buffer_t* buffer) {
-  int8_t value = (int8_t) buffer->value[0];
+  int8_t value;
   buffer->value += 1;
-  fseek(buffer->stream, 1, SEEK_CUR);
+  fread(&value, sizeof(int8_t), 1, buffer->stream);
   return value;
 }
 
@@ -78,7 +78,7 @@ void parse_relation(buffer_t* buffer, FILE *file) {
   fprintf(file, "   operation: relation\n");
   fprintf(file, "   namespace: %s\n", read_string(buffer));
   fprintf(file, "   name: %s\n", read_string(buffer));
-  fprintf(file, "   replica_identity_settigs: %d\n", read_int8(buffer));
+  fprintf(file, "   replica_identity_settings: %d\n", read_int8(buffer));
 
   number_columns = read_int16(buffer);
   fprintf(file, "   columns: \n");
