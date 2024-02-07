@@ -33,7 +33,7 @@ void delete_buffer(buffer_t* buffer) {
 }
 
 int8_t read_int8(buffer_t* buffer) {
-  int8_t value;
+  int8_t value = buffer->value[0];
   buffer->value += 1;
   fread(&value, sizeof(int8_t), 1, buffer->stream);
   return value;
