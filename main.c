@@ -17,32 +17,27 @@ const char* START_REPLICATION_QUERY = "START_REPLICATION SLOT \"%s\" LOGICAL 0/0
 
 typedef struct {
   char* value;
-  FILE* stream;
 } buffer_t;
 
 buffer_t *create_buffer(char* value, size_t size) {
   buffer_t* buffer = (buffer_t*)malloc(sizeof(buffer_t));
   buffer->value = value;
-  buffer->stream = fmemopen(value, size, "r");
   return buffer;
 }
 
 void delete_buffer(buffer_t* buffer) {
-  fclose(buffer->stream);
   free(buffer);
 }
 
 int8_t read_int8(buffer_t* buffer) {
   int8_t value = buffer->value[0];
   buffer->value += 1;
-  fread(&value, sizeof(int8_t), 1, buffer->stream);
   return value;
 }
 
 int16_t read_int16(buffer_t* buffer) {
   int16_t value = (int16_t)buffer->value[1] | buffer->value[0] << 8;
   buffer->value += 2;
-  fseek(buffer->stream, 2, SEEK_CUR);
   return value;
 }
 
@@ -50,14 +45,12 @@ int32_t read_int32(buffer_t* buffer) {
   int32_t value = (int32_t)(buffer->value[0] << 24) + (buffer->value[1] << 16) + (buffer->value[2] << 8) +
   buffer->value[3];
   buffer->value += 4;
-  fseek(buffer->stream, 4, SEEK_CUR);
   return value;
 }
 
 char read_char(buffer_t* buffer) {
   char value = buffer->value[0];
   buffer->value += 1;
-  fseek(buffer->stream, 1, SEEK_CUR);
   return value;
 }
 
@@ -65,7 +58,6 @@ char* read_string(buffer_t* buffer) {
   char* value = buffer->value;
   size_t size = strlen(buffer->value)+1;
   buffer->value += size;
-  fseek(buffer->stream, size, SEEK_CUR);
   return value;
 }
 
