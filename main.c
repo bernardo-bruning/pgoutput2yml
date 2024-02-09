@@ -5,6 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <arpa/inet.h>
 
 #include "options.h"
 #include "logging.h"
@@ -36,14 +37,13 @@ int8_t read_int8(buffer_t* buffer) {
 }
 
 int16_t read_int16(buffer_t* buffer) {
-  int16_t value = (int16_t)buffer->value[1] | buffer->value[0] << 8;
+  int16_t value = htons(*(int16_t*)(buffer->value));
   buffer->value += 2;
   return value;
 }
 
 int32_t read_int32(buffer_t* buffer) {
-  int32_t value = (int32_t)(buffer->value[0] << 24) + (buffer->value[1] << 16) + (buffer->value[2] << 8) +
-  buffer->value[3];
+  int32_t value = htonl(*(int32_t*)(buffer->value));
   buffer->value += 4;
   return value;
 }
