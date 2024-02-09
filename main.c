@@ -1,14 +1,9 @@
 #include <libpq-fe.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
-#include <stdbool.h>
-#include <arpa/inet.h>
 
 #include "options.h"
 #include "logging.h"
+#include "stream.h"
 
 const int ERR_CONNECT = 1;
 const int ERR_QUERY = 2;
@@ -16,52 +11,7 @@ const int ERR_FORMAT = 3;
 
 const char* START_REPLICATION_QUERY = "START_REPLICATION SLOT \"%s\" LOGICAL 0/0 (proto_version '1', publication_names '%s')";
 
-typedef struct {
-  char* value;
-} buffer_t;
-
-buffer_t *create_buffer(char* value, size_t size) {
-  buffer_t* buffer = (buffer_t*)malloc(sizeof(buffer_t));
-  buffer->value = value;
-  return buffer;
-}
-
-void delete_buffer(buffer_t* buffer) {
-  free(buffer);
-}
-
-int8_t read_int8(buffer_t* buffer) {
-  int8_t value = buffer->value[0];
-  buffer->value += 1;
-  return value;
-}
-
-int16_t read_int16(buffer_t* buffer) {
-  int16_t value = htons(*(int16_t*)(buffer->value));
-  buffer->value += 2;
-  return value;
-}
-
-int32_t read_int32(buffer_t* buffer) {
-  int32_t value = htonl(*(int32_t*)(buffer->value));
-  buffer->value += 4;
-  return value;
-}
-
-char read_char(buffer_t* buffer) {
-  char value = buffer->value[0];
-  buffer->value += 1;
-  return value;
-}
-
-char* read_string(buffer_t* buffer) {
-  char* value = buffer->value;
-  size_t size = strlen(buffer->value)+1;
-  buffer->value += size;
-  return value;
-}
-
-void parse_relation(buffer_t* buffer, FILE *file) {
+void parse_relation(stream_t* buffer, FILE *file) {
   uint32_t relation_id;
   int16_t number_columns;
 
@@ -84,7 +34,7 @@ void parse_relation(buffer_t* buffer, FILE *file) {
   fprintf(file, "\n");
 }
 
-void parse_tuple(buffer_t *buffer, FILE* file){
+void parse_tuple(stream_t *buffer, FILE* file){
   uint16_t columns_size = read_int16(buffer);
   int column_idx = 0;
   while (column_idx < columns_size) {
@@ -112,7 +62,7 @@ void parse_tuple(buffer_t *buffer, FILE* file){
   }
 }
 
-void parse_update(buffer_t *buffer, FILE* file) {
+void parse_update(stream_t *buffer, FILE* file) {
   char key_char;
   fprintf(file, " - relation_id: %d\n", read_int32(buffer));
   fprintf(file, "   operation: update\n");
@@ -135,7 +85,7 @@ void parse_update(buffer_t *buffer, FILE* file) {
   parse_tuple(buffer, file);
 }
 
-void parse_insert(buffer_t *buffer, FILE* file) {
+void parse_insert(stream_t *buffer, FILE* file) {
   uint32_t relation_id;
   int16_t number_columns;
 
@@ -153,7 +103,7 @@ void parse_insert(buffer_t *buffer, FILE* file) {
 int parse_buffer(char* buff, int size, FILE* file) {
   uint32_t relation_id;
   int16_t number_columns;
-  buffer_t *buffer = create_buffer(buff, size);
+  stream_t *buffer = create_buffer(buff, size);
   switch (read_char(buffer)) {
     case 'R':
       parse_relation(buffer, file);
@@ -275,8 +225,8 @@ int main(int argc, char *argv[]) {
   PGconn *conn;
   options_t options;
 
-  printf("YAML CDC\n");
-  printf("=======================\n");
+  INFO("YAML CDC\n");
+  INFO("=======================\n");
 
   options = parse_options(argc, argv);
 
