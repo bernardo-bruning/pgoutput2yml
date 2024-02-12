@@ -12,7 +12,7 @@ const int ERR_FORMAT = 3;
 const char* START_REPLICATION_QUERY = "START_REPLICATION SLOT \"%s\" LOGICAL 0/0 (proto_version '1', publication_names '%s')";
 
 void parse_relation(stream_t* buffer, FILE *file) {
-  uint32_t relation_id;
+  int32_t relation_id;
   int16_t number_columns;
 
   relation_id = read_int32(buffer);
@@ -35,7 +35,7 @@ void parse_relation(stream_t* buffer, FILE *file) {
 }
 
 void parse_tuple(stream_t *buffer, FILE* file){
-  uint16_t columns_size = read_int16(buffer);
+  int16_t columns_size = read_int16(buffer);
   int column_idx = 0;
   while (column_idx < columns_size) {
     char type = read_char(buffer);
@@ -86,7 +86,7 @@ void parse_update(stream_t *buffer, FILE* file) {
 }
 
 void parse_insert(stream_t *buffer, FILE* file) {
-  uint32_t relation_id;
+  int32_t relation_id;
   int16_t number_columns;
 
   relation_id = read_int32(buffer);
@@ -101,7 +101,7 @@ void parse_insert(stream_t *buffer, FILE* file) {
 }
 
 int parse_buffer(char* buff, int size, FILE* file) {
-  uint32_t relation_id;
+  int32_t relation_id;
   int16_t number_columns;
   stream_t *buffer = create_buffer(buff, size);
   switch (read_char(buffer)) {
