@@ -9,7 +9,9 @@ const int ERR_CONNECT = 1;
 const int ERR_QUERY = 2;
 const int ERR_FORMAT = 3;
 
-const char* START_REPLICATION_QUERY = "START_REPLICATION SLOT \"%s\" LOGICAL 0/0 (proto_version '1', publication_names '%s')";
+const char* START_REPLICATION_COMMAND = "START_REPLICATION SLOT \"%s\" LOGICAL 0/0 (proto_version '1', publication_names '%s')";
+const char* CREATE_REPLICATION_SLOT_COMMAND = "SELECT pg_create_logical_replication_slot('%s', 'pgoutput');";
+const char* DROP_REPLICATION_SLOT_COMMAND = "SELECT pg_drop_replication_slot('%s');";
 
 typedef struct {
   int64_t lsn_commit;
@@ -212,22 +214,42 @@ int create_connection(PGconn **conn, options_t options){
   return 0;
 }
 
-int install(PGconn *conn) {
+
+int install(PGconn *conn, char* slotname) {
   INFO("starting install");
-  PGresult* slot_result = PQexec(conn, "SELECT pg_create_logical_replication_slot('cdc', 'pgoutput');");
+  char command[1024];
+  int err;
+
+  err = sprintf(command, CREATE_REPLICATION_SLOT_COMMAND, slotname);
+  if(err < 0) {
+    ERROR("format create replication error");
+    return ERR_FORMAT;
+  }
+
+  PGresult* slot_result = PQexec(conn, command);
   char *error = PQresultErrorMessage(slot_result);
   if(error[0] != '\0') {
     ERROR("%s", error);
     return ERR_QUERY;
   }
+
   PQclear(slot_result);
   INFO("install completed");
   return 0;
 }
 
-int uninstall(PGconn *conn) {
+int uninstall(PGconn *conn, char* slotname) {
   INFO("starting uninstall");
-  PGresult* slot_result = PQexec(conn, "SELECT pg_drop_replication_slot('cdc');");
+  char command[1024];
+  int err;
+
+  err = sprintf(command, DROP_REPLICATION_SLOT_COMMAND, slotname);
+  if(err < 0) {
+    ERROR("format drop replication slot failed");
+    return ERR_FORMAT;
+  }
+
+  PGresult* slot_result = PQexec(conn, command);
   char *error = PQresultErrorMessage(slot_result);
   if(error[0] != '\0') {
     ERROR("%s", error);
@@ -247,7 +269,7 @@ int watch(PGconn *conn, FILE *file, char* slotname, char* publication) {
 
   INFO("watching changes");
   while (1) {
-    err = sprintf(query, START_REPLICATION_QUERY, slotname, publication);
+    err = sprintf(query, START_REPLICATION_COMMAND, slotname, publication);
     if(err < 0) {
       ERROR("format query replication error");
       return ERR_FORMAT;
@@ -313,14 +335,15 @@ int main(int argc, char *argv[]) {
   INFO("database connected");
 
   if(options.install) {
-    return install(conn);
+    return install(conn, options.slotname);
   }
 
   if(options.uninstall) {
-    return uninstall(conn);
+    return uninstall(conn, options.slotname);
   }
 
   err = watch(conn, file, options.slotname, options.publication);
+
   PQfinish(conn);
   fclose(file);
   return err;
