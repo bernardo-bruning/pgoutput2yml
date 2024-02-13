@@ -11,6 +11,12 @@ const int ERR_FORMAT = 3;
 
 const char* START_REPLICATION_QUERY = "START_REPLICATION SLOT \"%s\" LOGICAL 0/0 (proto_version '1', publication_names '%s')";
 
+typedef struct {
+  int64_t lsn_commit;
+  int64_t lsn_transaction;
+  int64_t commit_timestamp;
+} commit_t;
+
 void parse_relation(stream_t* buffer, FILE *file) {
   int32_t relation_id;
   int16_t number_columns;
@@ -100,37 +106,74 @@ void parse_insert(stream_t *buffer, FILE* file) {
   fprintf(file, "\n");
 }
 
-void parse_commit(stream_t *buffer, FILE* file) {
+commit_t parse_commit(stream_t *buffer, FILE* file) {
+  commit_t commit;
   if(read_int8(buffer) != 0) {
     ERROR("flag commit should be zero");
   } 
 
-  int64_t lsn_commit = read_int64(buffer);
-  int64_t lsn_transaction = read_int64(buffer);
-  int64_t commit_timestamp = read_int64(buffer);
-  fflush(file);
+  commit.lsn_commit = read_int64(buffer);
+  commit.lsn_transaction = read_int64(buffer);
+  commit.commit_timestamp = read_int64(buffer);
+  return commit;
 }
 
-int parse_buffer(char* buff, int size, FILE* file) {
+int update_status(PGconn *conn, int64_t wal, int64_t timestamp) {
+  DEBUG("updating status");
+  int err;
+  char buffer[1+8+8+8+8+1];
+
+  stream_t* stream = create_buffer(buffer, sizeof(buffer));
+  write_char(stream, 'r');
+  write_int64(stream, wal+1);
+  write_int64(stream, wal+1);
+  write_int64(stream, wal+1);
+  write_int64(stream, timestamp);
+  write_char(stream, 0);
+  err = PQputCopyData(conn, buffer, sizeof(buffer));
+  if(err != PGRES_COMMAND_OK) {
+    char *error = PQerrorMessage(conn);
+    ERROR("fatal error: %s", error);
+    return ERR_QUERY;
+  }
+  PQflush(conn);
+  delete_buffer(stream);
+}
+
+int handle_wal(PGconn *conn, stream_t *stream, FILE* file) {
+  DEBUG("handling wal");
+  skip_bytes(stream, 24); // Skip reading wal metadata
+
   int32_t relation_id;
   int16_t number_columns;
-  stream_t *buffer = create_buffer(buff, size);
-  switch (read_char(buffer)) {
+  char operation = read_char(stream);
+  DEBUG("handling operation %c", operation);
+  switch (operation) {
     case 'C':
-      parse_commit(buffer, file);
+      commit_t commit = parse_commit(stream, file);
+      fflush(file);
+      update_status(conn, commit.lsn_commit, commit.commit_timestamp);
       break;
     case 'R':
-      parse_relation(buffer, file);
+      parse_relation(stream, file);
       break;
     case 'I':
-      parse_insert(buffer, file);
+      parse_insert(stream, file);
       break;
     case 'U':
-      parse_update(buffer, file);
+      parse_update(stream, file);
       break;
   }
+}
 
-  delete_buffer(buffer);
+void handle_keepalive(PGconn *conn, stream_t *stream) {
+  DEBUG("handling keep alive");
+  int64_t wal = read_int64(stream);
+  int64_t timestamp = read_int64(stream);
+  char ops = read_char(stream);
+  if(ops == 1) {
+    update_status(conn, wal, timestamp);
+  }
 }
 
 int create_connection(PGconn **conn, options_t options){
@@ -204,20 +247,20 @@ int watch(PGconn *conn, FILE *file, char* slotname, char* publication) {
       return ERR_QUERY;
     }
 
-
     while(buffer_size = PQgetCopyData(conn, &buffer, 0) > 0) {
-      switch(buffer[0]) {
+      stream_t *stream = create_buffer(buffer, buffer_size);
+      switch(read_char(stream)) {
         case 'w':
-          buffer += 25; // Skip reading wal metadata
-          DEBUG("receiving wal with command %c", buffer[0]);
-          parse_buffer(buffer, buffer_size, file);
+          handle_wal(conn, stream, file);
           break;
         case 'k':
-          DEBUG("keeping alive");
+          handle_keepalive(conn, stream);
           break;
         default:
           DEBUG("buffer input not parsed: %s", buffer);
       }
+
+      delete_buffer(stream);
     }
 
     result = PQgetResult(conn);

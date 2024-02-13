@@ -11,6 +11,10 @@ void delete_buffer(stream_t* buffer) {
   free(buffer);
 }
 
+void skip_bytes(stream_t* buffer, size_t size) {
+  buffer->value += size;
+}
+
 int8_t read_int8(stream_t* buffer) {
   int8_t value = buffer->value[0];
   buffer->value += 1;
