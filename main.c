@@ -14,10 +14,18 @@ const char* CREATE_REPLICATION_SLOT_COMMAND = "SELECT pg_create_logical_replicat
 const char* DROP_REPLICATION_SLOT_COMMAND = "SELECT pg_drop_replication_slot('%s');";
 
 typedef struct {
-  int64_t lsn_commit;
-  int64_t lsn_transaction;
-  int64_t commit_timestamp;
+  int64_t lsn;
+  int64_t transaction;
+  int64_t timestamp;
 } commit_t;
+
+typedef struct {
+  int32_t relation_id;
+  int16_t number_columns;
+  char* namespace;
+  char* name;
+  int8_t identity_settings;
+} relation_t;
 
 void parse_relation(stream_t* buffer, FILE *file) {
   int32_t relation_id;
@@ -128,9 +136,9 @@ commit_t parse_commit(stream_t *stream, FILE* file) {
     ERROR("flag commit should be zero");
   } 
 
-  commit.lsn_commit = read_int64(stream);
-  commit.lsn_transaction = read_int64(stream);
-  commit.commit_timestamp = read_int64(stream);
+  commit.lsn = read_int64(stream);
+  commit.transaction = read_int64(stream);
+  commit.timestamp = read_int64(stream);
   return commit;
 }
 
@@ -168,7 +176,7 @@ int handle_wal(PGconn *conn, stream_t *stream, FILE* file) {
     case 'C':
       commit_t commit = parse_commit(stream, file);
       fflush(file);
-      update_status(conn, commit.lsn_commit, commit.commit_timestamp);
+      update_status(conn, commit.lsn, commit.timestamp);
       break;
     case 'R':
       parse_relation(stream, file);
