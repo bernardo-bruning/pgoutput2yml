@@ -19,56 +19,48 @@ typedef struct {
   int64_t timestamp;
 } commit_t;
 
-typedef struct {
-  int32_t relation_id;
-  int16_t number_columns;
-  char* namespace;
-  char* name;
-  int8_t identity_settings;
-} relation_t;
-
-void parse_relation(stream_t* buffer, FILE *file) {
+void parse_relation(stream_t* stream, FILE *file) {
   int32_t relation_id;
   int16_t number_columns;
 
-  relation_id = read_int32(buffer);
+  relation_id = read_int32(stream);
   fprintf(file, " - relation_id: %d:\n", relation_id);
   fprintf(file, "   operation: relation\n");
-  fprintf(file, "   namespace: %s\n", read_string(buffer));
-  fprintf(file, "   name: %s\n", read_string(buffer));
-  fprintf(file, "   replica_identity_settings: %d\n", read_int8(buffer));
+  fprintf(file, "   namespace: %s\n", read_string(stream));
+  fprintf(file, "   name: %s\n", read_string(stream));
+  fprintf(file, "   replica_identity_settings: %d\n", read_int8(stream));
 
-  number_columns = read_int16(buffer);
+  number_columns = read_int16(stream);
   fprintf(file, "   columns: \n");
   for(int i=0; i<number_columns; i++) {
-    read_int8(buffer); // read flag column
-    fprintf(file, "     - %s \n", read_string(buffer));
-    read_int32(buffer); // read oid
-    read_int32(buffer); // atttypmod
+    read_int8(stream); // read flag column
+    fprintf(file, "     - %s \n", read_string(stream));
+    read_int32(stream); // read oid
+    read_int32(stream); // atttypmod
   }
 
   fprintf(file, "\n");
 }
 
-void parse_tuple(stream_t *buffer, FILE* file){
-  int16_t columns_size = read_int16(buffer);
+void parse_tuple(stream_t *stream, FILE* file){
+  int16_t columns_size = read_int16(stream);
   int column_idx = 0;
   while (column_idx < columns_size) {
-    char type = read_char(buffer);
-    int32_t tuple_size = read_int32(buffer);
+    char type = read_char(stream);
+    int32_t tuple_size = read_int32(stream);
 
     switch (type) {
       case 't':
         fprintf(file, "\t  - ");
         for (int j = 0; j < tuple_size; j++) {
-          fprintf(file, "%c", buffer->value[j]);
+          fprintf(file, "%c", stream->value[j]);
         }
-        buffer->value += tuple_size;
+        stream->value += tuple_size;
         fprintf(file, "\n");
         break;
       case 'n':
         fprintf(file, "\t - NULL\n");
-        buffer->value++;
+        stream->value++;
         break;
       default:
         DEBUG("unknown data tuple: %c", type);
@@ -78,27 +70,27 @@ void parse_tuple(stream_t *buffer, FILE* file){
   }
 }
 
-void parse_update(stream_t *buffer, FILE* file) {
+void parse_update(stream_t *stream, FILE* file) {
   char key_char;
-  fprintf(file, " - relation_id: %d\n", read_int32(buffer));
+  fprintf(file, " - relation_id: %d\n", read_int32(stream));
   fprintf(file, "   operation: update\n");
 
-  key_char = read_char(buffer);
+  key_char = read_char(stream);
   if(key_char != 'K' && key_char != 'O') {
     ERROR("unexpected key char %c", key_char);
     exit(ERR_FORMAT);
   }
 
   fprintf(file, "   old_data:\n");
-  parse_tuple(buffer, file);
+  parse_tuple(stream, file);
 
-  key_char = read_char(buffer);
+  key_char = read_char(stream);
   if(key_char != 'N') {
     return;
   }
 
   fprintf(file, "   new_data:\n");
-  parse_tuple(buffer, file);
+  parse_tuple(stream, file);
 }
 
 void parse_delete(stream_t *stream, FILE* file) {
