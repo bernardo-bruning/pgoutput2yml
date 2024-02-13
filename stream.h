@@ -7,8 +7,8 @@ typedef struct {
   char* value;
 } stream_t;
 
-stream_t *create_buffer(char* value, size_t size);
-void delete_buffer(stream_t* buffer);
+stream_t *create_stream(char* value, size_t size);
+void delete_stream(stream_t* buffer);
 void skip_bytes(stream_t* buffer, size_t size);
 int8_t read_int8(stream_t* buffer);
 int16_t read_int16(stream_t* buffer);

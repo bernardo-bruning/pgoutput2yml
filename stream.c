@@ -1,13 +1,13 @@
 #include "stream.h"
 #include <endian.h>
 
-stream_t *create_buffer(char* value, size_t size) {
+stream_t *create_stream(char* value, size_t size) {
   stream_t* buffer = (stream_t*)malloc(sizeof(stream_t));
   buffer->value = value;
   return buffer;
 }
 
-void delete_buffer(stream_t* buffer) {
+void delete_stream(stream_t* buffer) {
   free(buffer);
 }
 

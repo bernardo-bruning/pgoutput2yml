@@ -123,7 +123,7 @@ int update_status(PGconn *conn, int64_t wal, int64_t timestamp) {
   int err;
   char buffer[1+8+8+8+8+1];
 
-  stream_t* stream = create_buffer(buffer, sizeof(buffer));
+  stream_t* stream = create_stream(buffer, sizeof(buffer));
   write_char(stream, 'r');
   write_int64(stream, wal+1);
   write_int64(stream, wal+1);
@@ -137,7 +137,7 @@ int update_status(PGconn *conn, int64_t wal, int64_t timestamp) {
     return ERR_QUERY;
   }
   PQflush(conn);
-  delete_buffer(stream);
+  delete_stream(stream);
 }
 
 int handle_wal(PGconn *conn, stream_t *stream, FILE* file) {
@@ -248,7 +248,7 @@ int watch(PGconn *conn, FILE *file, char* slotname, char* publication) {
     }
 
     while(buffer_size = PQgetCopyData(conn, &buffer, 0) > 0) {
-      stream_t *stream = create_buffer(buffer, buffer_size);
+      stream_t *stream = create_stream(buffer, buffer_size);
       switch(read_char(stream)) {
         case 'w':
           handle_wal(conn, stream, file);
@@ -260,7 +260,7 @@ int watch(PGconn *conn, FILE *file, char* slotname, char* publication) {
           DEBUG("buffer input not parsed: %s", buffer);
       }
 
-      delete_buffer(stream);
+      delete_stream(stream);
     }
 
     result = PQgetResult(conn);
