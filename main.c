@@ -53,9 +53,8 @@ void parse_tuple(stream_t *stream, FILE* file){
       case 't':
         fprintf(file, "\t  - ");
         for (int j = 0; j < tuple_size; j++) {
-          fprintf(file, "%c", stream->value[j]);
+          fprintf(file, "%c", read_char(stream));
         }
-        stream->value += tuple_size;
         fprintf(file, "\n");
         break;
       case 'n':
