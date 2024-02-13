@@ -53,3 +53,8 @@ void write_int64(stream_t* buffer, int64_t value) {
   (*(int64_t*)(buffer->value)) = value;
   buffer->value += 8;
 }
+
+void write_char(stream_t* buffer, char value) {
+  buffer->value[0] = value;
+  buffer->value++;
+}

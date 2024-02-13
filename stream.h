@@ -12,7 +12,9 @@ void delete_buffer(stream_t* buffer);
 int8_t read_int8(stream_t* buffer);
 int16_t read_int16(stream_t* buffer);
 int32_t read_int32(stream_t* buffer);
+int64_t read_int64(stream_t* buffer);
 char read_char(stream_t* buffer);
 char* read_string(stream_t* buffer);
 
+void write_int64(stream_t* buffer, int64_t value);
 

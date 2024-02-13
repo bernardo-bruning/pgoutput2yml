@@ -100,11 +100,25 @@ void parse_insert(stream_t *buffer, FILE* file) {
   fprintf(file, "\n");
 }
 
+void parse_commit(stream_t *buffer, FILE* file) {
+  if(read_int8(buffer) != 0) {
+    ERROR("flag commit should be zero");
+  } 
+
+  int64_t lsn_commit = read_int64(buffer);
+  int64_t lsn_transaction = read_int64(buffer);
+  int64_t commit_timestamp = read_int64(buffer);
+  fflush(file);
+}
+
 int parse_buffer(char* buff, int size, FILE* file) {
   int32_t relation_id;
   int16_t number_columns;
   stream_t *buffer = create_buffer(buff, size);
   switch (read_char(buffer)) {
+    case 'C':
+      parse_commit(buffer, file);
+      break;
     case 'R':
       parse_relation(buffer, file);
       break;
@@ -197,7 +211,6 @@ int watch(PGconn *conn, FILE *file, char* slotname, char* publication) {
           buffer += 25; // Skip reading wal metadata
           DEBUG("receiving wal with command %c", buffer[0]);
           parse_buffer(buffer, buffer_size, file);
-          fflush(file);
           break;
         case 'k':
           DEBUG("keeping alive");
