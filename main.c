@@ -300,6 +300,7 @@ int watch(PGconn *conn, FILE *file, char* slotname, char* publication) {
       }
 
       delete_stream(stream);
+      PQfreemem(buffer);
     }
 
     result = PQgetResult(conn);
@@ -309,8 +310,6 @@ int watch(PGconn *conn, FILE *file, char* slotname, char* publication) {
     }
 
     PQclear(result);
-    PQfreemem(buffer);
-    sleep(1);
   }
 }
 
