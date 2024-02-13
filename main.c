@@ -91,30 +91,44 @@ void parse_update(stream_t *buffer, FILE* file) {
   parse_tuple(buffer, file);
 }
 
-void parse_insert(stream_t *buffer, FILE* file) {
+void parse_delete(stream_t *stream, FILE* file) {
+  int32_t relation_id = read_int32(stream);
+  char key_char = read_char(stream);
+  if(key_char != 'K' && key_char != 'O') {
+    ERROR("unexpected key char %c", key_char);
+    exit(ERR_FORMAT);
+  }
+
+  fprintf(file, " - relation_id: %d\n", relation_id);
+  fprintf(file, "   operation: delete\n");
+  fprintf(file, "   data:\n");
+  parse_tuple(stream, file);
+}
+
+void parse_insert(stream_t *stream, FILE* file) {
   int32_t relation_id;
   int16_t number_columns;
 
-  relation_id = read_int32(buffer);
-  char char_tuple = read_char(buffer);
+  relation_id = read_int32(stream);
+  char char_tuple = read_char(stream);
 
   fprintf(file, " - relation_id: %d\n", relation_id);
   fprintf(file, "   operation: insert\n");
 
   fprintf(file, "   data:\n");
-  parse_tuple(buffer, file);
+  parse_tuple(stream, file);
   fprintf(file, "\n");
 }
 
-commit_t parse_commit(stream_t *buffer, FILE* file) {
+commit_t parse_commit(stream_t *stream, FILE* file) {
   commit_t commit;
-  if(read_int8(buffer) != 0) {
+  if(read_int8(stream) != 0) {
     ERROR("flag commit should be zero");
   } 
 
-  commit.lsn_commit = read_int64(buffer);
-  commit.lsn_transaction = read_int64(buffer);
-  commit.commit_timestamp = read_int64(buffer);
+  commit.lsn_commit = read_int64(stream);
+  commit.lsn_transaction = read_int64(stream);
+  commit.commit_timestamp = read_int64(stream);
   return commit;
 }
 
@@ -162,6 +176,9 @@ int handle_wal(PGconn *conn, stream_t *stream, FILE* file) {
       break;
     case 'U':
       parse_update(stream, file);
+      break;
+    case 'D':
+      parse_delete(stream, file);
       break;
   }
 }
