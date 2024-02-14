@@ -2,12 +2,20 @@
 
 System that allows you to replicate data through capturing changes in Postgres.
 
-## INSTALL
-
-To use the cdc2yml is necessary install with command:
+## COMPILE
+To compile execute the command:
 
 ```
-cdc --host $HOST --user $USER --password $PASSWORD --install
+sudo apt install libpq-dev
+make
+```
+
+## INSTALL
+
+To use the pgoutput2yml is necessary install with command:
+
+```
+pgoutput2yml --host $HOST --user $USER --password $PASSWORD --install
 
 ```
 
@@ -15,7 +23,7 @@ cdc --host $HOST --user $USER --password $PASSWORD --install
 
 Running in terminal the command:
 ```
-cdc --host $HOST --user $USER --password $PASSWORD
+pgoutput2yml --host $HOST --user $USER --password $PASSWORD
 ```
 
 ## UNINSTALL
@@ -23,7 +31,7 @@ cdc --host $HOST --user $USER --password $PASSWORD
 To uninstall is necessary remove with command:
 
 ```
-cdc --host $HOST --user $USER --password $PASSWORD --uninstall
+pgoutput2yml --host $HOST --user $USER --password $PASSWORD --uninstall
 ```
 
 ## AUTHOR
