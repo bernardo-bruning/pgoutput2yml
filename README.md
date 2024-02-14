@@ -16,7 +16,6 @@ To use the pgoutput2yml is necessary install with command:
 
 ```
 pgoutput2yml --host $HOST --user $USER --password $PASSWORD --install
-
 ```
 
 ## USAGE
