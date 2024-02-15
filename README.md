@@ -16,7 +16,6 @@ To use the pgoutput2yml is necessary install with command:
 
 ```
 pgoutput2yml --host $HOST --user $USER --password $PASSWORD --install
-
 ```
 
 ## USAGE
@@ -33,7 +32,3 @@ To uninstall is necessary remove with command:
 ```
 pgoutput2yml --host $HOST --user $USER --password $PASSWORD --uninstall
 ```
-
-## AUTHOR
-
-Bernardo Bruning - bernardo.bruning@gmail.com
