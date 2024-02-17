@@ -57,6 +57,11 @@ char* read_string(stream_t* stream) {
   return value;
 }
 
+void write_int8(stream_t* stream, int8_t value) {
+  stream->current[0] = value;
+  stream->current++;
+}
+
 void write_int16(stream_t* stream, int16_t value){
   value = htobe16(value);
   (*(int16_t*)(stream->current)) = value;

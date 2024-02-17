@@ -4,18 +4,23 @@
 
 START_TEST(read_char_test) 
 {
-  char buffer[1] = "a";
-  stream_t* stream = create_stream(buffer, sizeof(buffer));
-  ck_assert_msg(read_char(stream) == 'a', "Read char is expected a but not received");
+  char buffer[1];
+  stream_t* stream_read = create_stream(buffer, sizeof(buffer));
+  stream_t* stream_write = create_stream(buffer, sizeof(buffer));
+  write_char(stream_write, 'a');
+  ck_assert_int_eq(read_int8(stream_read), 97);
+  ck_assert_int_eq(stream_pos(stream_read), 1);
 }
 END_TEST
 
 START_TEST(read_int8_test)
 {
-  char buffer[1] = "a";
-  stream_t* stream = create_stream(buffer, sizeof(buffer));
-  ck_assert_int_eq(read_int8(stream), 97);
-  ck_assert_int_eq(stream_pos(stream), 1);
+  char buffer[1];
+  stream_t* stream_read = create_stream(buffer, sizeof(buffer));
+  stream_t* stream_write = create_stream(buffer, sizeof(buffer));
+  write_int8(stream_write, 91);
+  ck_assert_int_eq(read_int8(stream_read), 91);
+  ck_assert_int_eq(stream_pos(stream_read), 1);
 }
 END_TEST
 
