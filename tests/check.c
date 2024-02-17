@@ -68,8 +68,6 @@ START_TEST(read_string_test)
 }
 END_TEST
 
-
-
 Suite* create_suite(void) {
   Suite *s;
   TCase *tc_core;
