@@ -59,7 +59,7 @@ void parse_tuple(stream_t *stream, FILE* file){
         break;
       case 'n':
         fprintf(file, "\t - NULL\n");
-        stream->value++;
+        stream->current++;
         break;
       default:
         DEBUG("unknown data tuple: %c", type);

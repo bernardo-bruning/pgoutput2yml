@@ -8,12 +8,14 @@ INCLUDES = -I/usr/include/postgresql
 
 all: check build
 
-build: ./src/main.c ./src/options.c ./src/stream.c
-	@mkdir -p bin
+build: dir ./src/main.c ./src/options.c ./src/stream.c
 	$(CC) ./src/main.c $(SRC_FILES) -o bin/pgoutput2yml $(INCLUDES) $(FLAGS) $(DEFS)
+
+dir:
+	@mkdir -p bin
 
 clean:
 	@rm -R bin
 
-check:
+check: dir
 	$(CC) $(TEST_FILES) $(SRC_FILES) -o bin/check $(INCLUDES) $(FLAGS_TESTS) $(FLAGS) $(DEFS) && ./bin/check
