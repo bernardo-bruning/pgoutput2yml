@@ -4,6 +4,7 @@
 #include "options.h"
 #include "logging.h"
 #include "stream.h"
+#include "decoder.h"
 
 const int ERR_CONNECT = 1;
 const int ERR_QUERY = 2;
@@ -12,12 +13,6 @@ const int ERR_FORMAT = 3;
 const char* START_REPLICATION_COMMAND = "START_REPLICATION SLOT \"%s\" LOGICAL 0/0 (proto_version '1', publication_names '%s')";
 const char* CREATE_REPLICATION_SLOT_COMMAND = "SELECT pg_create_logical_replication_slot('%s', 'pgoutput');";
 const char* DROP_REPLICATION_SLOT_COMMAND = "SELECT pg_drop_replication_slot('%s');";
-
-typedef struct {
-  int64_t lsn;
-  int64_t transaction;
-  int64_t timestamp;
-} commit_t;
 
 void parse_relation(stream_t* stream, FILE *file) {
   int32_t relation_id;
@@ -121,18 +116,6 @@ void parse_insert(stream_t *stream, FILE* file) {
   fprintf(file, "\n");
 }
 
-commit_t parse_commit(stream_t *stream, FILE* file) {
-  commit_t commit;
-  if(read_int8(stream) != 0) {
-    ERROR("flag commit should be zero");
-  } 
-
-  commit.lsn = read_int64(stream);
-  commit.transaction = read_int64(stream);
-  commit.timestamp = read_int64(stream);
-  return commit;
-}
-
 int update_status(PGconn *conn, int64_t wal, int64_t timestamp) {
   DEBUG("updating status");
   int err;
@@ -156,6 +139,8 @@ int update_status(PGconn *conn, int64_t wal, int64_t timestamp) {
 }
 
 int handle_wal(PGconn *conn, stream_t *stream, FILE* file) {
+  int err;
+
   DEBUG("handling wal");
   skip_bytes(stream, 24); // Skip reading wal metadata
 
@@ -165,7 +150,12 @@ int handle_wal(PGconn *conn, stream_t *stream, FILE* file) {
   DEBUG("handling operation %c", operation);
   switch (operation) {
     case 'C':
-      commit_t commit = parse_commit(stream, file);
+      commit_t commit;
+      err = parse_commit(stream, &commit);
+      if(err != OK) {
+        return err;
+      }
+
       fflush(file);
       update_status(conn, commit.lsn, commit.timestamp);
       break;

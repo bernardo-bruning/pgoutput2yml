@@ -1,5 +1,5 @@
 CC = gcc
-SRC_FILES = ./src/options.c ./src/stream.c
+SRC_FILES = ./src/options.c ./src/stream.c ./src/decoder.c
 TEST_FILES = ./tests/check.c
 FLAGS = -lpq
 FLAGS_TESTS = -lcheck -lm -lpthread -lrt -lsubunit 

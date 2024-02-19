@@ -2,6 +2,7 @@
 #include <check.h>
 #include "../src/stream.h"
 #include "../src/options.h"
+#include "../src/decoder.h"
 
 START_TEST(read_char_test) 
 {
@@ -188,6 +189,54 @@ START_TEST(test_parse_options_uninstall)
 }
 END_TEST
 
+START_TEST(test_parse_commit_success)
+{
+  int err;
+  commit_t commit;
+  char buffer[1024];
+
+  stream_t* writer = create_stream(buffer, sizeof(buffer));
+  stream_t* reader = create_stream(buffer, sizeof(buffer));
+
+  write_int8(writer, 0);
+  write_int64(writer, 1);
+  write_int64(writer, 2);
+  write_int64(writer, 3);
+
+  err = parse_commit(reader, &commit);
+
+  ck_assert_int_eq(err, OK);
+
+  ck_assert_int_eq(commit.lsn, 1);
+  ck_assert_int_eq(commit.transaction, 2);
+  ck_assert_int_eq(commit.timestamp, 3);
+
+  delete_stream(writer);
+  delete_stream(reader);
+}
+END_TEST
+
+START_TEST(test_parse_commit_failed)
+{
+  int err;
+  commit_t commit;
+  char buffer[1024];
+
+  stream_t* writer = create_stream(buffer, sizeof(buffer));
+  stream_t* reader = create_stream(buffer, sizeof(buffer));
+
+  write_int8(writer, 2);
+
+  err = parse_commit(reader, &commit);
+
+  ck_assert_int_eq(err, FAILED);
+
+  delete_stream(writer);
+  delete_stream(reader);
+}
+END_TEST
+
+
 Suite* create_suite(void) {
   Suite *s;
   TCase *tc_core;
@@ -202,6 +251,7 @@ Suite* create_suite(void) {
   tcase_add_test(tc_core, read_int32_test);
   tcase_add_test(tc_core, read_int64_test);
   tcase_add_test(tc_core, read_string_test);
+
   tcase_add_test(tc_core, test_parse_options);
   tcase_add_test(tc_core, test_parse_options_file);
   tcase_add_test(tc_core, test_parse_options_dbname);
@@ -213,6 +263,10 @@ Suite* create_suite(void) {
   tcase_add_test(tc_core, test_parse_options_publication);
   tcase_add_test(tc_core, test_parse_options_install);
   tcase_add_test(tc_core, test_parse_options_uninstall);
+
+  tcase_add_test(tc_core, test_parse_commit_success);
+  tcase_add_test(tc_core, test_parse_commit_failed);
+
   suite_add_tcase(s, tc_core);
   return s;
 }

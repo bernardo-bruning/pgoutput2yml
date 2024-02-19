@@ -1,3 +1,5 @@
+#pragma once
+
 #define INFO(format, ...) printf("INFO: " format "\n", ##__VA_ARGS__)
 
 #ifdef DEBUG_ON
