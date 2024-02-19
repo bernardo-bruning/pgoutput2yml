@@ -242,7 +242,7 @@ START_TEST(test_parse_relation_success)
   stream_t* writer = create_stream(buffer, sizeof(buffer));
   stream_t* reader = create_stream(buffer, sizeof(buffer));
 
-  write_int8(writer, 1);
+  write_int32(writer, 1);
   write_string(writer, "test-namespace");
   write_string(writer, "test-name");
   write_int8(writer, 1);

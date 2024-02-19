@@ -22,7 +22,7 @@ void delete_commit(commit_t* commit) {
 
 relation_t* parse_relation(stream_t *stream) {
   relation_t* relation = malloc(sizeof(relation_t));
-  relation->id = read_int8(stream);
+  relation->id = read_int32(stream);
   relation->namespace = read_string(stream);
   relation->name = read_string(stream);
   relation->replicate_identity_settings = read_int8(stream);
