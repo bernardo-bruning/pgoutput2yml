@@ -43,7 +43,7 @@ options_t parse_options(int argc, char *argv[]) {
     if(parse_option("--host", &options.host, i, argv)){ continue; }
     if(parse_option("--port", &options.port, i, argv)){ continue; }
     if(parse_option("--slotname", &options.slotname, i, argv)){ continue; }
-    if(parse_option("--publication", &options.slotname, i, argv)){ continue; }
+    if(parse_option("--publication", &options.publication, i, argv)){ continue; }
     if(parse_has_option("--install", &options.install, i, argv)) { continue; }
     if(parse_has_option("--uninstall", &options.uninstall, i, argv)) { continue; }
   }

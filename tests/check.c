@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <check.h>
 #include "../src/stream.h"
+#include "../src/options.h"
 
 START_TEST(read_char_test) 
 {
@@ -68,6 +69,125 @@ START_TEST(read_string_test)
 }
 END_TEST
 
+START_TEST(test_parse_options)
+{
+  int argc = 0;
+  char** argv;
+  options_t options = parse_options(argc, argv);
+
+  ck_assert_str_eq(options.file, "cdc.yaml");
+  ck_assert_str_eq(options.dbname, "postgres");
+  ck_assert_str_eq(options.user, "postgres");
+  ck_assert_str_eq(options.password, "postgres");
+  ck_assert_str_eq(options.host, "localhost");
+  ck_assert_str_eq(options.port, "5432");
+  ck_assert_str_eq(options.slotname, "cdc");
+  ck_assert_str_eq(options.publication, "cdc");
+  ck_assert_int_eq(options.install, false);
+  ck_assert_int_eq(options.uninstall, false);
+}
+END_TEST
+
+START_TEST(test_parse_options_file)
+{
+  int argc = 2;
+  char* argv[] = { "--file", "test.yaml" };
+  options_t options = parse_options(argc, argv);
+
+  ck_assert_str_eq(options.file, "test.yaml");
+}
+END_TEST
+
+START_TEST(test_parse_options_dbname)
+{
+  int argc = 2;
+  char* argv[] = { "--dbname", "test" };
+  options_t options = parse_options(argc, argv);
+
+  ck_assert_str_eq(options.dbname, "test");
+}
+END_TEST
+
+START_TEST(test_parse_options_user)
+{
+  int argc = 2;
+  char* argv[] = { "--user", "test" };
+  options_t options = parse_options(argc, argv);
+
+  ck_assert_str_eq(options.user, "test");
+}
+END_TEST
+
+START_TEST(test_parse_options_password)
+{
+  int argc = 2;
+  char* argv[] = { "--password", "test" };
+  options_t options = parse_options(argc, argv);
+
+  ck_assert_str_eq(options.password, "test");
+}
+END_TEST
+
+START_TEST(test_parse_options_host)
+{
+  int argc = 2;
+  char* argv[] = { "--host", "test" };
+  options_t options = parse_options(argc, argv);
+
+  ck_assert_str_eq(options.host, "test");
+}
+END_TEST
+
+START_TEST(test_parse_options_port)
+{
+  int argc = 2;
+  char* argv[] = { "--port", "1234" };
+  options_t options = parse_options(argc, argv);
+
+  ck_assert_str_eq(options.port, "1234");
+}
+END_TEST
+
+START_TEST(test_parse_options_slotname)
+{
+  int argc = 2;
+  char* argv[] = { "--slotname", "test" };
+  options_t options = parse_options(argc, argv);
+
+  ck_assert_str_eq(options.slotname, "test");
+}
+END_TEST
+
+START_TEST(test_parse_options_publication)
+{
+  int argc = 2;
+  char* argv[] = { "--publication", "test" };
+  options_t options = parse_options(argc, argv);
+
+  ck_assert_str_eq(options.publication, "test");
+}
+END_TEST
+
+START_TEST(test_parse_options_install)
+{
+  int argc = 1;
+  char* argv[] = { "--install" };
+  options_t options = parse_options(argc, argv);
+
+  ck_assert_int_eq(options.install, true);
+}
+END_TEST
+
+START_TEST(test_parse_options_uninstall)
+{
+  int argc = 1;
+  char* argv[] = { "--uninstall" };
+  options_t options = parse_options(argc, argv);
+
+  ck_assert_int_eq(options.uninstall, true);
+}
+END_TEST
+
 Suite* create_suite(void) {
   Suite *s;
   TCase *tc_core;
@@ -82,6 +202,17 @@ Suite* create_suite(void) {
   tcase_add_test(tc_core, read_int32_test);
   tcase_add_test(tc_core, read_int64_test);
   tcase_add_test(tc_core, read_string_test);
+  tcase_add_test(tc_core, test_parse_options);
+  tcase_add_test(tc_core, test_parse_options_file);
+  tcase_add_test(tc_core, test_parse_options_dbname);
+  tcase_add_test(tc_core, test_parse_options_user);
+  tcase_add_test(tc_core, test_parse_options_password);
+  tcase_add_test(tc_core, test_parse_options_host);
+  tcase_add_test(tc_core, test_parse_options_port);
+  tcase_add_test(tc_core, test_parse_options_slotname);
+  tcase_add_test(tc_core, test_parse_options_publication);
+  tcase_add_test(tc_core, test_parse_options_install);
+  tcase_add_test(tc_core, test_parse_options_uninstall);
   suite_add_tcase(s, tc_core);
   return s;
 }

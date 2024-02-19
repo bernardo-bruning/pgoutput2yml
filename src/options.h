@@ -14,4 +14,5 @@ typedef struct {
   bool uninstall;
 } options_t;
 
+
 options_t parse_options(int argc, char *argv[]);
