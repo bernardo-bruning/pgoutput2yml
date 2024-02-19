@@ -9,32 +9,18 @@
 const int ERR_CONNECT = 1;
 const int ERR_QUERY = 2;
 const int ERR_FORMAT = 3;
+const int ERR_HANDLE = 4;
 
 const char* START_REPLICATION_COMMAND = "START_REPLICATION SLOT \"%s\" LOGICAL 0/0 (proto_version '1', publication_names '%s')";
 const char* CREATE_REPLICATION_SLOT_COMMAND = "SELECT pg_create_logical_replication_slot('%s', 'pgoutput');";
 const char* DROP_REPLICATION_SLOT_COMMAND = "SELECT pg_drop_replication_slot('%s');";
 
-void parse_relation(stream_t* stream, FILE *file) {
-  int32_t relation_id;
-  int16_t number_columns;
-
-  relation_id = read_int32(stream);
-  fprintf(file, " - relation_id: %d:\n", relation_id);
+void print_relation(relation_t* relation, FILE *file) {
+  fprintf(file, " - relation_id: %ld:\n", relation->id);
   fprintf(file, "   operation: relation\n");
-  fprintf(file, "   namespace: %s\n", read_string(stream));
-  fprintf(file, "   name: %s\n", read_string(stream));
-  fprintf(file, "   replica_identity_settings: %d\n", read_int8(stream));
-
-  number_columns = read_int16(stream);
-  fprintf(file, "   columns: \n");
-  for(int i=0; i<number_columns; i++) {
-    read_int8(stream); // read flag column
-    fprintf(file, "     - %s \n", read_string(stream));
-    read_int32(stream); // read oid
-    read_int32(stream); // atttypmod
-  }
-
-  fprintf(file, "\n");
+  fprintf(file, "   namespace: %s\n", relation->namespace);
+  fprintf(file, "   name: %s\n", relation->name);
+  fprintf(file, "   replica_identity_settings: %d\n", relation->replicate_identity_settings);
 }
 
 void parse_tuple(stream_t *stream, FILE* file){
@@ -150,17 +136,19 @@ int handle_wal(PGconn *conn, stream_t *stream, FILE* file) {
   DEBUG("handling operation %c", operation);
   switch (operation) {
     case 'C':
-      commit_t commit;
-      err = parse_commit(stream, &commit);
-      if(err != OK) {
-        return err;
+      commit_t* commit = parse_commit(stream);
+      if(commit == NULL) {
+        return ERR_HANDLE;
       }
 
       fflush(file);
-      update_status(conn, commit.lsn, commit.timestamp);
+      update_status(conn, commit->lsn, commit->timestamp);
+      delete_commit(commit);
       break;
     case 'R':
-      parse_relation(stream, file);
+      relation_t* relation = parse_relation(stream);
+      print_relation(relation, file);
+      delete_relation(relation);
       break;
     case 'I':
       parse_insert(stream, file);

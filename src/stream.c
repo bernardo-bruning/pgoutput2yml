@@ -84,3 +84,8 @@ void write_char(stream_t* stream, char value) {
   stream->current[0] = value;
   stream->current++;
 }
+
+void write_string(stream_t* stream, char* value) {
+  strcpy(stream->current, value);
+  stream->current += strlen(value)+1;
+}

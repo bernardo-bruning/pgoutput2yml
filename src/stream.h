@@ -25,4 +25,4 @@ void write_int16(stream_t* stream, int16_t value);
 void write_int32(stream_t* stream, int32_t value);
 void write_int64(stream_t* stream, int64_t value);
 void write_char(stream_t* stream, char value);
-
+void write_string(stream_t* stream, char* value);

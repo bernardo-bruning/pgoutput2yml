@@ -191,8 +191,7 @@ END_TEST
 
 START_TEST(test_parse_commit_success)
 {
-  int err;
-  commit_t commit;
+  commit_t* commit;
   char buffer[1024];
 
   stream_t* writer = create_stream(buffer, sizeof(buffer));
@@ -203,23 +202,21 @@ START_TEST(test_parse_commit_success)
   write_int64(writer, 2);
   write_int64(writer, 3);
 
-  err = parse_commit(reader, &commit);
+  commit = parse_commit(reader);
 
-  ck_assert_int_eq(err, OK);
-
-  ck_assert_int_eq(commit.lsn, 1);
-  ck_assert_int_eq(commit.transaction, 2);
-  ck_assert_int_eq(commit.timestamp, 3);
+  ck_assert_int_eq(commit->lsn, 1);
+  ck_assert_int_eq(commit->transaction, 2);
+  ck_assert_int_eq(commit->timestamp, 3);
 
   delete_stream(writer);
   delete_stream(reader);
+  delete_commit(commit);
 }
 END_TEST
 
 START_TEST(test_parse_commit_failed)
 {
-  int err;
-  commit_t commit;
+  commit_t* commit;
   char buffer[1024];
 
   stream_t* writer = create_stream(buffer, sizeof(buffer));
@@ -227,12 +224,57 @@ START_TEST(test_parse_commit_failed)
 
   write_int8(writer, 2);
 
-  err = parse_commit(reader, &commit);
+  commit = parse_commit(reader);
 
-  ck_assert_int_eq(err, FAILED);
+  ck_assert_ptr_null(commit);
 
   delete_stream(writer);
   delete_stream(reader);
+  delete_commit(commit);
+}
+END_TEST
+
+START_TEST(test_parse_relation_success)
+{
+  relation_t* relation;
+  char buffer[1024];
+
+  stream_t* writer = create_stream(buffer, sizeof(buffer));
+  stream_t* reader = create_stream(buffer, sizeof(buffer));
+
+  write_int8(writer, 1);
+  write_string(writer, "test-namespace");
+  write_string(writer, "test-name");
+  write_int8(writer, 1);
+  write_int16(writer, 2);
+
+  //Write column a
+  write_int8(writer, 1);
+  write_string(writer, "column-a");
+  write_int32(writer, 1);
+  write_int32(writer, 1);  
+
+  //Write column b
+  write_int8(writer, 1);
+  write_string(writer, "column-b");
+  write_int32(writer, 1);
+  write_int32(writer, 1);
+
+  relation = parse_relation(reader);
+
+  ck_assert_int_eq(relation->id, 1);
+  ck_assert_str_eq(relation->namespace, "test-namespace");
+  ck_assert_str_eq(relation->name, "test-name");
+  ck_assert_int_eq(relation->replicate_identity_settings, 1);
+  ck_assert_int_eq(relation->number_columns, 2);
+
+  ck_assert_str_eq(relation->columns[0], "column-a");
+  ck_assert_str_eq(relation->columns[1], "column-b");
+
+
+  delete_stream(writer);
+  delete_stream(reader);
+  delete_relation(relation);
 }
 END_TEST
 
@@ -266,6 +308,7 @@ Suite* create_suite(void) {
 
   tcase_add_test(tc_core, test_parse_commit_success);
   tcase_add_test(tc_core, test_parse_commit_failed);
+  tcase_add_test(tc_core, test_parse_relation_success);
 
   suite_add_tcase(s, tc_core);
   return s;
