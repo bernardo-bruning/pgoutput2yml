@@ -56,7 +56,6 @@ char* parse_tuple(stream_t* stream) {
       for(int i=0; i<size; i++) {
         tuple[i] = read_char(stream);
       }
-
       tuple[size] = '\0';
       break;
     case 'n':

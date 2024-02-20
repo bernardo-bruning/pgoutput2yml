@@ -21,13 +21,16 @@ void print_relation(relation_t* relation, FILE *file) {
   fprintf(file, "   namespace: %s\n", relation->namespace);
   fprintf(file, "   name: %s\n", relation->name);
   fprintf(file, "   replica_identity_settings: %d\n", relation->replicate_identity_settings);
+  fprintf(file, "   columns:\n");
+  for(int i=0; i<relation->number_columns; i++) {
+    fprintf(file, "\t - %s\n", relation->columns[i]);
+  }
 }
 
 void print_tuples(tuples_t *tuples, FILE *file) {
   for(int i=0; i < tuples->size; i++) {
     char* tuple = tuples->values[i];
-    fprintf(file, "\t  - %s", tuple);
-    fprintf(file, "\n");
+    fprintf(file, "\t  - %s\n", tuple);
   }
 }
 
