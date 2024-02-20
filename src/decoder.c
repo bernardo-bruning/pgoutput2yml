@@ -46,15 +46,18 @@ void delete_relation(relation_t* relation) {
 }
 
 char* parse_tuple(stream_t* stream) {
-  char* tuple;
   char type = read_char(stream);
+  char* tuple;
 
   switch(type) {
     case 't':
       int32_t size = read_int32(stream);
-      tuple = malloc(sizeof(char)*size+1);
+      tuple = calloc(size+1, sizeof(char));
+      for(int i=0; i<size; i++) {
+        tuple[i] = read_char(stream);
+      }
+
       tuple[size] = '\0';
-      strncpy(tuple, read_string(stream), size);
       break;
     case 'n':
       tuple = (char*)NULL_STR;
@@ -67,7 +70,7 @@ char* parse_tuple(stream_t* stream) {
 tuples_t* parse_tuples(stream_t* stream) {
   tuples_t* tuples = malloc(sizeof(tuples_t));
   tuples->size = read_int16(stream);
-  tuples->values = malloc(sizeof(char*)*tuples->size);
+  tuples->values = calloc(tuples->size, sizeof(char*));
   for(int i=0; i<tuples->size; i++) {
     tuples->values[i] = parse_tuple(stream);
   }
@@ -76,5 +79,10 @@ tuples_t* parse_tuples(stream_t* stream) {
 }
 
 void delete_tuples(tuples_t* tuples) {
+  for(int i=0; i<tuples->size; i++) {
+    free(tuples->values[i]);
+  }
+
+  free(tuples->values);
   free(tuples);
 }

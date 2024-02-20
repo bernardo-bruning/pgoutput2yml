@@ -25,7 +25,8 @@ void print_relation(relation_t* relation, FILE *file) {
 
 void print_tuples(tuples_t *tuples, FILE *file) {
   for(int i=0; i < tuples->size; i++) {
-    fprintf(file, "\t  - %s", tuples->values[i]);
+    char* tuple = tuples->values[i];
+    fprintf(file, "\t  - %s", tuple);
     fprintf(file, "\n");
   }
 }
