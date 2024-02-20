@@ -278,6 +278,40 @@ START_TEST(test_parse_relation_success)
 }
 END_TEST
 
+START_TEST(parse_tuples_single_NULL_test)
+{
+  char buffer[1024];
+
+  stream_t* writer = create_stream(buffer, sizeof(buffer));
+  stream_t* reader = create_stream(buffer, sizeof(buffer));
+
+  write_int16(writer, 1);
+  write_char(writer, 'n');
+  tuples_t *tuples = parse_tuples(reader);
+
+  ck_assert_int_eq(tuples->size, 1);
+  ck_assert_str_eq(tuples->values[0], "NULL");
+}
+END_TEST
+
+START_TEST(parse_tuples_single_text_test)
+{
+  char buffer[1024];
+
+  stream_t* writer = create_stream(buffer, sizeof(buffer));
+  stream_t* reader = create_stream(buffer, sizeof(buffer));
+
+  write_int16(writer, 1);
+  write_char(writer, 't');
+  write_int32(writer, 4);
+  write_string(writer, "test12345");
+
+  tuples_t *tuples = parse_tuples(reader);
+
+  ck_assert_int_eq(tuples->size, 1);
+  ck_assert_str_eq(tuples->values[0], "test");
+}
+END_TEST
 
 Suite* create_suite(void) {
   Suite *s;
@@ -309,6 +343,9 @@ Suite* create_suite(void) {
   tcase_add_test(tc_core, test_parse_commit_success);
   tcase_add_test(tc_core, test_parse_commit_failed);
   tcase_add_test(tc_core, test_parse_relation_success);
+
+  tcase_add_test(tc_core, parse_tuples_single_NULL_test);
+  tcase_add_test(tc_core, parse_tuples_single_text_test);
 
   suite_add_tcase(s, tc_core);
   return s;

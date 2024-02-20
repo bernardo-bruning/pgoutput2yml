@@ -23,30 +23,10 @@ void print_relation(relation_t* relation, FILE *file) {
   fprintf(file, "   replica_identity_settings: %d\n", relation->replicate_identity_settings);
 }
 
-void parse_tuple(stream_t *stream, FILE* file){
-  int16_t columns_size = read_int16(stream);
-  int column_idx = 0;
-  while (column_idx < columns_size) {
-    char type = read_char(stream);
-    int32_t tuple_size = read_int32(stream);
-
-    switch (type) {
-      case 't':
-        fprintf(file, "\t  - ");
-        for (int j = 0; j < tuple_size; j++) {
-          fprintf(file, "%c", read_char(stream));
-        }
-        fprintf(file, "\n");
-        break;
-      case 'n':
-        fprintf(file, "\t - NULL\n");
-        stream->current++;
-        break;
-      default:
-        DEBUG("unknown data tuple: %c", type);
-    }
-
-    column_idx++;
+void print_tuples(tuples_t *tuples, FILE *file) {
+  for(int i=0; i < tuples->size; i++) {
+    fprintf(file, "\t  - %s", tuples->values[i]);
+    fprintf(file, "\n");
   }
 }
 
@@ -62,7 +42,9 @@ void parse_update(stream_t *stream, FILE* file) {
   }
 
   fprintf(file, "   old_data:\n");
-  parse_tuple(stream, file);
+  tuples_t *tuple = parse_tuples(stream);
+  print_tuples(tuple, file);
+  delete_tuples(tuple);
 
   key_char = read_char(stream);
   if(key_char != 'N') {
@@ -70,7 +52,9 @@ void parse_update(stream_t *stream, FILE* file) {
   }
 
   fprintf(file, "   new_data:\n");
-  parse_tuple(stream, file);
+  tuples_t *tuples = parse_tuples(stream);
+  print_tuples(tuples, file);
+  delete_tuples(tuple);
 }
 
 void parse_delete(stream_t *stream, FILE* file) {
@@ -84,7 +68,9 @@ void parse_delete(stream_t *stream, FILE* file) {
   fprintf(file, " - relation_id: %d\n", relation_id);
   fprintf(file, "   operation: delete\n");
   fprintf(file, "   data:\n");
-  parse_tuple(stream, file);
+  tuples_t *tuples = parse_tuples(stream);
+  print_tuples(tuples, file);
+  delete_tuples(tuples);
 }
 
 void parse_insert(stream_t *stream, FILE* file) {
@@ -98,7 +84,9 @@ void parse_insert(stream_t *stream, FILE* file) {
   fprintf(file, "   operation: insert\n");
 
   fprintf(file, "   data:\n");
-  parse_tuple(stream, file);
+  tuples_t *tuples = parse_tuples(stream);
+  print_tuples(tuples, file);
+  delete_tuples(tuples);
   fprintf(file, "\n");
 }
 

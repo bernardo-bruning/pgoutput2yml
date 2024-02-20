@@ -3,6 +3,8 @@
 #include "logging.h"
 #include "decoder.h"
 
+const char* NULL_STR = "NULL";
+
 commit_t* parse_commit(stream_t *stream) {
   commit_t* commit = malloc(sizeof(commit_t));
   if(read_int8(stream) != 0) {
@@ -41,4 +43,38 @@ relation_t* parse_relation(stream_t *stream) {
 void delete_relation(relation_t* relation) {
   free(relation->columns);
   free(relation);
+}
+
+char* parse_tuple(stream_t* stream) {
+  char* tuple;
+  char type = read_char(stream);
+
+  switch(type) {
+    case 't':
+      int32_t size = read_int32(stream);
+      tuple = malloc(sizeof(char)*size+1);
+      tuple[size] = '\0';
+      strncpy(tuple, read_string(stream), size);
+      break;
+    case 'n':
+      tuple = (char*)NULL_STR;
+      break;
+  }
+
+  return tuple;
+}
+
+tuples_t* parse_tuples(stream_t* stream) {
+  tuples_t* tuples = malloc(sizeof(tuples_t));
+  tuples->size = read_int16(stream);
+  tuples->values = malloc(sizeof(char*)*tuples->size);
+  for(int i=0; i<tuples->size; i++) {
+    tuples->values[i] = parse_tuple(stream);
+  }
+
+  return tuples;
+}
+
+void delete_tuples(tuples_t* tuples) {
+  free(tuples);
 }

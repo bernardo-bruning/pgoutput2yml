@@ -25,3 +25,13 @@ typedef struct {
 
 relation_t* parse_relation(stream_t *stream);
 void delete_relation(relation_t* relation);
+
+char* parse_tuple(stream_t *stream);
+
+typedef struct {
+  int16_t size;
+  char** values;
+} tuples_t;
+
+tuples_t* parse_tuples(stream_t* stream);
+void delete_tuples(tuples_t* tuples);
