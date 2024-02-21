@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdlib.h>
+#include <stdio.h>
 #include "stream.h"
 
 enum Error { OK, FAILED };
@@ -25,6 +26,7 @@ typedef struct {
 
 relation_t* parse_relation(stream_t *stream);
 void delete_relation(relation_t* relation);
+void print_relation(relation_t* relation, FILE *file);
 
 char* parse_tuple(stream_t *stream);
 
@@ -35,6 +37,7 @@ typedef struct {
 
 tuples_t* parse_tuples(stream_t* stream);
 void delete_tuples(tuples_t* tuples);
+void print_tuples(tuples_t *tuples, FILE *file);
 
 typedef struct {
   int32_t relation_id;
@@ -44,6 +47,7 @@ typedef struct {
 
 update_t* parse_update(stream_t* stream);
 void delete_update(update_t* update);
+void print_update(update_t *update, FILE *file);
 
 typedef struct {
   int32_t relation_id;
@@ -52,6 +56,7 @@ typedef struct {
 
 delete_t* parse_delete(stream_t* stream);
 void delete_delete(delete_t* del);
+void print_delete(delete_t *del, FILE *file);
 
 typedef struct {
   int32_t relation_id;
@@ -60,3 +65,4 @@ typedef struct {
 
 insert_t* parse_insert(stream_t* stream);
 void delete_insert(insert_t* insert);
+void print_insert(insert_t *insert, FILE *file);

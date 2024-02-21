@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include "logging.h"
 #include "decoder.h"
 
@@ -144,3 +142,47 @@ void delete_insert(insert_t* insert) {
   delete_tuples(insert->data);
   free(insert);
 }
+
+void print_relation(relation_t* relation, FILE *file) {
+  fprintf(file, " - relation_id: %ld:\n", relation->id);
+  fprintf(file, "   operation: relation\n");
+  fprintf(file, "   namespace: %s\n", relation->namespace);
+  fprintf(file, "   name: %s\n", relation->name);
+  fprintf(file, "   replica_identity_settings: %d\n", relation->replicate_identity_settings);
+  fprintf(file, "   columns:\n");
+  for(int i=0; i<relation->number_columns; i++) {
+    fprintf(file, "\t - %s\n", relation->columns[i]);
+  }
+}
+
+void print_tuples(tuples_t *tuples, FILE *file) {
+  for(int i=0; i < tuples->size; i++) {
+    char* tuple = tuples->values[i];
+    fprintf(file, "\t  - %s\n", tuple);
+  }
+}
+
+void print_update(update_t *update, FILE *file) {
+  fprintf(file, " - relation_id: %d\n", update->relation_id);
+  fprintf(file, "   operation: update\n");
+  fprintf(file, "   from:\n");
+  print_tuples(update->from, file);
+  fprintf(file, "   to:\n");
+  print_tuples(update->to, file);
+}
+
+void print_delete(delete_t *del, FILE *file) {
+  fprintf(file, " - relation_id: %d\n", del->relation_id);
+  fprintf(file, "   operation: delete\n");
+  fprintf(file, "   data:\n");
+  print_tuples(del->data, file);
+}
+
+void print_insert(insert_t *insert, FILE *file) {
+  fprintf(file, " - relation_id: %d\n", insert->relation_id);
+  fprintf(file, "   operation: insert\n");
+  fprintf(file, "   data:\n");
+  print_tuples(insert->data, file);
+}
+
+
