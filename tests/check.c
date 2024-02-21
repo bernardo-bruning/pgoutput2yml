@@ -313,6 +313,135 @@ START_TEST(parse_tuples_single_text_test)
 }
 END_TEST
 
+START_TEST(parse_update_success_test)
+{
+  char buffer[1024];
+
+  stream_t* writer = create_stream(buffer, sizeof(buffer));
+  stream_t* reader = create_stream(buffer, sizeof(buffer));
+
+  write_int32(writer, 1);
+
+  write_char(writer, 'O');
+
+  //create tuple
+  write_int16(writer, 1);
+  write_char(writer, 't');
+  write_int32(writer, 10);
+  write_string(writer, "old tuple");
+
+  write_char(writer, 'N');
+
+  //create tuple
+  write_int16(writer, 1);
+  write_char(writer, 't');
+  write_int32(writer, 10);
+  write_string(writer, "new tuple");
+
+  update_t* update = parse_update(reader);
+
+  ck_assert_int_eq(update->relation_id, 1);
+  ck_assert_ptr_nonnull(update->from);
+  ck_assert_ptr_nonnull(update->to);
+}
+END_TEST
+
+START_TEST(parse_update_success_key_test)
+{
+  char buffer[1024];
+
+  stream_t* writer = create_stream(buffer, sizeof(buffer));
+  stream_t* reader = create_stream(buffer, sizeof(buffer));
+
+  write_int32(writer, 1);
+
+  write_char(writer, 'K');
+
+  //create tuple
+  write_int16(writer, 1);
+  write_char(writer, 't');
+  write_int32(writer, 10);
+  write_string(writer, "old tuple");
+
+  write_char(writer, 'N');
+
+  //create tuple
+  write_int16(writer, 1);
+  write_char(writer, 't');
+  write_int32(writer, 10);
+  write_string(writer, "new tuple");
+
+  update_t* update = parse_update(reader);
+
+  ck_assert_int_eq(update->relation_id, 1);
+  ck_assert_ptr_nonnull(update->from);
+  ck_assert_ptr_nonnull(update->to);
+}
+END_TEST
+
+
+START_TEST(parse_update_failed_key_test)
+{
+  char buffer[1024];
+
+  stream_t* writer = create_stream(buffer, sizeof(buffer));
+  stream_t* reader = create_stream(buffer, sizeof(buffer));
+
+  write_int32(writer, 1);
+
+  write_char(writer, 'P');
+
+  //create tuple
+  write_int16(writer, 1);
+  write_char(writer, 't');
+  write_int32(writer, 10);
+  write_string(writer, "old tuple");
+
+  write_char(writer, 'N');
+
+  //create tuple
+  write_int16(writer, 1);
+  write_char(writer, 't');
+  write_int32(writer, 10);
+  write_string(writer, "new tuple");
+
+  update_t* update = parse_update(reader);
+  ck_assert_ptr_null(update);
+}
+END_TEST
+
+START_TEST(parse_update_without_n_test)
+{
+  char buffer[1024];
+
+  stream_t* writer = create_stream(buffer, sizeof(buffer));
+  stream_t* reader = create_stream(buffer, sizeof(buffer));
+
+  write_int32(writer, 1);
+
+  write_char(writer, 'O');
+
+  //create tuple
+  write_int16(writer, 1);
+  write_char(writer, 't');
+  write_int32(writer, 10);
+  write_string(writer, "old tuple");
+
+  write_char(writer, 'O');
+
+  //create tuple
+  write_int16(writer, 1);
+  write_char(writer, 't');
+  write_int32(writer, 10);
+  write_string(writer, "new tuple");
+
+  update_t* update = parse_update(reader);
+  ck_assert_ptr_null(update);
+}
+END_TEST
+
+
+
 Suite* create_suite(void) {
   Suite *s;
   TCase *tc_core;
@@ -346,6 +475,10 @@ Suite* create_suite(void) {
 
   tcase_add_test(tc_core, parse_tuples_single_NULL_test);
   tcase_add_test(tc_core, parse_tuples_single_text_test);
+  tcase_add_test(tc_core, parse_update_success_test);
+  tcase_add_test(tc_core, parse_update_success_key_test);
+  tcase_add_test(tc_core, parse_update_failed_key_test);
+  tcase_add_test(tc_core, parse_update_without_n_test);
 
   suite_add_tcase(s, tc_core);
   return s;

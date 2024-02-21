@@ -34,31 +34,13 @@ void print_tuples(tuples_t *tuples, FILE *file) {
   }
 }
 
-void parse_update(stream_t *stream, FILE* file) {
-  char key_char;
-  fprintf(file, " - relation_id: %d\n", read_int32(stream));
+void print_update(update_t *update, FILE *file) {
+  fprintf(file, " - relation_id: %d\n", update->relation_id);
   fprintf(file, "   operation: update\n");
-
-  key_char = read_char(stream);
-  if(key_char != 'K' && key_char != 'O') {
-    ERROR("unexpected key char %c", key_char);
-    exit(ERR_FORMAT);
-  }
-
-  fprintf(file, "   old_data:\n");
-  tuples_t *tuple = parse_tuples(stream);
-  print_tuples(tuple, file);
-  delete_tuples(tuple);
-
-  key_char = read_char(stream);
-  if(key_char != 'N') {
-    return;
-  }
-
-  fprintf(file, "   new_data:\n");
-  tuples_t *tuples = parse_tuples(stream);
-  print_tuples(tuples, file);
-  delete_tuples(tuple);
+  fprintf(file, "   from:\n");
+  print_tuples(update->from, file);
+  fprintf(file, "   to:\n");
+  print_tuples(update->to, file);
 }
 
 void parse_delete(stream_t *stream, FILE* file) {
@@ -146,7 +128,9 @@ int handle_wal(PGconn *conn, stream_t *stream, FILE* file) {
       parse_insert(stream, file);
       break;
     case 'U':
-      parse_update(stream, file);
+      update_t* update = parse_update(stream);
+      print_update(update, file);
+      delete_update(update);
       break;
     case 'D':
       parse_delete(stream, file);

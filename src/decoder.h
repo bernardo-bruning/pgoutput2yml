@@ -35,3 +35,12 @@ typedef struct {
 
 tuples_t* parse_tuples(stream_t* stream);
 void delete_tuples(tuples_t* tuples);
+
+typedef struct {
+  int32_t relation_id;
+  tuples_t* from;
+  tuples_t* to;
+} update_t;
+
+update_t* parse_update(stream_t* stream);
+void delete_update(update_t* update);

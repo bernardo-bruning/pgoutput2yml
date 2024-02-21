@@ -85,3 +85,29 @@ void delete_tuples(tuples_t* tuples) {
   free(tuples->values);
   free(tuples);
 }
+
+update_t* parse_update(stream_t* stream) {
+  update_t* update = malloc(sizeof(update_t));
+  update->relation_id = read_int32(stream);
+
+  char key_char = read_char(stream);
+  if(key_char != 'K' && key_char != 'O') {
+    ERROR("unexpected key char %c", key_char);
+    return NULL;
+  }
+
+  update->from = parse_tuples(stream);
+  key_char = read_char(stream);
+  if(key_char != 'N') {
+    return NULL;
+  }
+
+  update->to = parse_tuples(stream);
+  return update;
+}
+
+void delete_update(update_t* update) {
+  delete_tuples(update->from);
+  delete_tuples(update->to);
+  free(update);
+}
