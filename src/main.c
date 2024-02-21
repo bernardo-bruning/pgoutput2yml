@@ -43,20 +43,11 @@ void print_update(update_t *update, FILE *file) {
   print_tuples(update->to, file);
 }
 
-void parse_delete(stream_t *stream, FILE* file) {
-  int32_t relation_id = read_int32(stream);
-  char key_char = read_char(stream);
-  if(key_char != 'K' && key_char != 'O') {
-    ERROR("unexpected key char %c", key_char);
-    exit(ERR_FORMAT);
-  }
-
-  fprintf(file, " - relation_id: %d\n", relation_id);
+void print_delete(delete_t *del, FILE *file) {
+  fprintf(file, " - relation_id: %d\n", del->relation_id);
   fprintf(file, "   operation: delete\n");
   fprintf(file, "   data:\n");
-  tuples_t *tuples = parse_tuples(stream);
-  print_tuples(tuples, file);
-  delete_tuples(tuples);
+  print_tuples(del->data, file);
 }
 
 void parse_insert(stream_t *stream, FILE* file) {
@@ -133,8 +124,12 @@ int handle_wal(PGconn *conn, stream_t *stream, FILE* file) {
       delete_update(update);
       break;
     case 'D':
-      parse_delete(stream, file);
+      delete_t* delete = parse_delete(stream);
+      print_delete(delete, file);
+      delete_delete(delete);
       break;
+    default:
+      DEBUG("unknown operation: %c", operation);
   }
 }
 

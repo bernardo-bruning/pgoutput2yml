@@ -44,3 +44,11 @@ typedef struct {
 
 update_t* parse_update(stream_t* stream);
 void delete_update(update_t* update);
+
+typedef struct {
+  int32_t relation_id;
+  tuples_t* data;
+} delete_t;
+
+delete_t* parse_delete(stream_t* stream);
+void delete_delete(delete_t* del);
