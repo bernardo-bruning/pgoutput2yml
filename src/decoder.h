@@ -52,3 +52,11 @@ typedef struct {
 
 delete_t* parse_delete(stream_t* stream);
 void delete_delete(delete_t* del);
+
+typedef struct {
+  int32_t relation_id;
+  tuples_t* data;
+} insert_t;
+
+insert_t* parse_insert(stream_t* stream);
+void delete_insert(insert_t* insert);

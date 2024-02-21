@@ -463,6 +463,28 @@ START_TEST(parse_delete_test)
 }
 END_TEST
 
+START_TEST(parse_insert_test)
+{
+  char buffer[1024];
+
+  stream_t* writer = create_stream(buffer, sizeof(buffer));
+  stream_t* reader = create_stream(buffer, sizeof(buffer));
+
+  write_int32(writer, 1);
+  write_char(writer, 'O');
+
+  //create tuple
+  write_int16(writer, 1);
+  write_char(writer, 't');
+  write_int32(writer, 10);
+  write_string(writer, "old tuple");
+
+  insert_t* insert = parse_insert(reader);
+  ck_assert_int_eq(insert->relation_id, 1);
+  ck_assert_ptr_nonnull(insert->data);
+}
+END_TEST
+
 
 Suite* create_suite(void) {
   Suite *s;

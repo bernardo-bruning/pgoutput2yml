@@ -125,7 +125,22 @@ delete_t* parse_delete(stream_t* stream) {
   del->data = parse_tuples(stream);
   return del;
 }
+
 void delete_delete(delete_t* del) {
   delete_tuples(del->data);
   free(del);
+}
+
+insert_t* parse_insert(stream_t* stream) {
+  insert_t *insert = malloc(sizeof(insert_t));
+  insert->relation_id = read_int32(stream);
+
+  char char_tuple = read_char(stream);
+  insert->data = parse_tuples(stream);
+  return insert;
+}
+
+void delete_insert(insert_t* insert) {
+  delete_tuples(insert->data);
+  free(insert);
 }

@@ -50,21 +50,11 @@ void print_delete(delete_t *del, FILE *file) {
   print_tuples(del->data, file);
 }
 
-void parse_insert(stream_t *stream, FILE* file) {
-  int32_t relation_id;
-  int16_t number_columns;
-
-  relation_id = read_int32(stream);
-  char char_tuple = read_char(stream);
-
-  fprintf(file, " - relation_id: %d\n", relation_id);
+void print_insert(insert_t *insert, FILE *file) {
+  fprintf(file, " - relation_id: %d\n", insert->relation_id);
   fprintf(file, "   operation: insert\n");
-
   fprintf(file, "   data:\n");
-  tuples_t *tuples = parse_tuples(stream);
-  print_tuples(tuples, file);
-  delete_tuples(tuples);
-  fprintf(file, "\n");
+  print_tuples(insert->data, file);
 }
 
 int update_status(PGconn *conn, int64_t wal, int64_t timestamp) {
@@ -116,7 +106,9 @@ int handle_wal(PGconn *conn, stream_t *stream, FILE* file) {
       delete_relation(relation);
       break;
     case 'I':
-      parse_insert(stream, file);
+      insert_t* insert = parse_insert(stream);
+      print_insert(insert, file);
+      delete_insert(insert);
       break;
     case 'U':
       update_t* update = parse_update(stream);
