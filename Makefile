@@ -3,7 +3,7 @@ SRC_FILES = ./src/options.c ./src/stream.c ./src/decoder.c
 TEST_FILES = ./tests/check.c
 FLAGS = -lpq
 FLAGS_TESTS = -lcheck -lm -lpthread -lrt -lsubunit 
-DEFS = -DDEBUG_ON
+DEFS = -DERROR_LEVEL -DINFO_LEVEL
 INCLUDES = -I/usr/include/postgresql
 
 all: check build
@@ -18,4 +18,4 @@ clean:
 	@rm -R bin
 
 check: dir
-	$(CC) $(TEST_FILES) $(SRC_FILES) -o bin/check $(INCLUDES) $(FLAGS_TESTS) $(FLAGS) $(DEFS) && ./bin/check
+	$(CC) $(TEST_FILES) $(SRC_FILES) -o bin/check $(INCLUDES) $(FLAGS_TESTS) $(FLAGS) && ./bin/check
