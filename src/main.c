@@ -16,7 +16,7 @@ const char* CREATE_REPLICATION_SLOT_COMMAND = "SELECT pg_create_logical_replicat
 const char* DROP_REPLICATION_SLOT_COMMAND = "SELECT pg_drop_replication_slot('%s');";
 
 int update_status(PGconn *conn, int64_t wal, int64_t timestamp) {
-  DEBUG("updating status");
+  DEBUG("updating status: %ld", wal);
   int err;
   char buffer[1+8+8+8+8+1];
 
@@ -166,6 +166,7 @@ int watch(PGconn *conn, FILE *file, char* slotname, char* publication) {
   PGresult *result;
 
   INFO("watching changes");
+  fprintf(file, "---\n");
   while (1) {
     err = sprintf(query, START_REPLICATION_COMMAND, slotname, publication);
     if(err < 0) {

@@ -3,7 +3,7 @@ SRC_FILES = ./src/options.c ./src/stream.c ./src/decoder.c
 TEST_FILES = ./tests/check.c
 FLAGS = -lpq
 FLAGS_TESTS = -lcheck -lm -lpthread -lrt -lsubunit 
-DEFS = -DERROR_LEVEL -DINFO_LEVEL -DDEBUG_LEVEL
+DEFS = -DERROR_LEVEL -DINFO_LEVEL
 INCLUDES = -I/usr/include/postgresql
 
 all: check build
