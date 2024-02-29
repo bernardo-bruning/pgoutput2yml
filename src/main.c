@@ -223,8 +223,6 @@ int main(int argc, char *argv[]) {
 
   options = parse_options(argc, argv);
 
-  file = fopen(options.file, "a+");
-
   err = create_connection(&conn, options);
   if(err > 0) {
     return err;
@@ -240,9 +238,9 @@ int main(int argc, char *argv[]) {
     return uninstall(conn, options.slotname);
   }
 
-  err = watch(conn, file, options.slotname, options.publication);
+  err = watch(conn, stdout, options.slotname, options.publication);
 
   PQfinish(conn);
-  fclose(file);
+  fclose(stdout);
   return err;
 }
